@@ -6,6 +6,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
+import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
@@ -28,11 +29,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.util.List;
 
 public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback {
 
     private Camera mCamera;
     private CameraPreview mPreview;
+    MediaRecorder recorder;
     final String TAG = "MainActivity";
 
     private static final int REQUEST_CAMERA_PERMISSION = 1;
@@ -81,28 +84,20 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         Button record_button = findViewById(R.id.record_button);
 
-        final MediaRecorder recorder;
-        recorder = new MediaRecorder();
-
         record_button.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                         Log.i(TAG, "Botón pulsado");
-                        init_recorder(recorder,mCamera,mPreview);
-                        try {
-                            recorder.prepare();
-                        } catch (IOException e) {
-                            //e.printStackTrace();
-                        }
-                        recorder.start();
+                        init_recorder(mCamera,mPreview);
+
                         break;
                     case MotionEvent.ACTION_UP:
                         // RELEASED
                         Log.i(TAG, "Botón soltado");
                         // Paro de grabar
-                        stop_recorder(recorder,mCamera);
+                        stop_recorder(mCamera);
 
                         // Preparación del encriptado
                         //init_encrypt();
@@ -117,29 +112,50 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
     }
 
-    void init_recorder(MediaRecorder recorder, Camera mCamera, CameraPreview mPreview) {
+    void init_recorder(Camera mCamera, CameraPreview mPreview) {
+        // BEGIN_INCLUDE (configure_media_recorder)
+        recorder = new MediaRecorder();
+
+        // Step 1: Unlock and set camera to MediaRecorder
         mCamera.unlock();
         mCamera.stopPreview();
         recorder.setCamera(mCamera);
         recorder.setOrientationHint(90);
+
+        // Step 2: Set sources
         recorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
         recorder.setVideoSource(MediaRecorder.VideoSource.DEFAULT);
 
+        // Step 4: Encoders
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         recorder.setVideoEncoder(MediaRecorder.VideoEncoder.DEFAULT);
 
-
+        // Set 5: Output file
         recorder.setPreviewDisplay(mPreview.getHolder().getSurface());
         recorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/myrecording.mp4");
         //recorder.setOutputFile("/dev/null");
+
+        // Step 5: Prepare configured MediaRecorder
+        try {
+            recorder.prepare();
+        } catch (IllegalStateException e) {
+            Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
+        } catch (IOException e) {
+            Log.d(TAG, "IOException preparing MediaRecorder: " + e.getMessage());
+        }
+        recorder.start();
     }
 
-    void stop_recorder(MediaRecorder recorder, Camera mCamera){
-        recorder.stop();
-        recorder.reset();
-        recorder.release();
-        mCamera.lock();
+    void stop_recorder(Camera mCamera){
+        if (recorder != null) {
+            recorder.stop();
+            recorder.reset();
+            recorder.release();
+            recorder = null;
+            mCamera.lock();
+        }
+
     }
 
 
