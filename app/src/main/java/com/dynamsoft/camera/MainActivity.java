@@ -1,10 +1,14 @@
 package com.dynamsoft.camera;
 
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -25,6 +29,8 @@ public class MainActivity extends Activity {
     private CameraPreview mPreview;
     final String TAG = "MainActivity";
 
+    private static final int REQUEST_CAMERA_PERMISSION = 1;
+
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -39,7 +45,14 @@ public class MainActivity extends Activity {
 
 
         // Create an instance of Camera
-        mCamera = getCameraInstance();
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestCameraPermission();
+            return;
+        } else {
+            mCamera = getCameraInstance();
+        }
+
 
         // Create our Preview view and set it as the content of our activity.
         mPreview = new CameraPreview(this, mCamera);
@@ -89,8 +102,28 @@ public class MainActivity extends Activity {
         releaseCamera();
 
     }
+
+    private void requestCameraPermission() {
+        requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String[] permissions, int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_CAMERA_PERMISSION: {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                } else {
+                }
+                return;
+            }
+        }
+    }
+
     /** A safe way to get an instance of the Camera object. */
     public static Camera getCameraInstance() {
+
         Camera c = null;
         try {
             c = Camera.open();
