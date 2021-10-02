@@ -12,6 +12,8 @@ import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
@@ -61,6 +63,13 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             mCamera = getCameraInstance();
         }
 
+        // Notificación
+        LayoutInflater inflater = getLayoutInflater();
+        @SuppressLint("InflateParams") View layout = inflater.inflate(R.layout.toast1, null);
+        final Toast record_toast = new Toast(getApplicationContext());
+        record_toast.setGravity(Gravity.CENTER_VERTICAL, 0, 0);
+        record_toast.setDuration(Toast.LENGTH_SHORT);
+        record_toast.setView(layout);
 
         // Create our Preview view and set it as the content of our activity.
         mPreview = new CameraPreview(this, mCamera);
@@ -93,16 +102,12 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                         // RELEASED
                         Log.i(TAG, "Botón soltado");
                         // Paro de grabar
-                        // recorder.stop();
-                        // recorder.reset();
-                        // recorder.release();
-                        // mCamera.lock();
                         stop_recorder(recorder,mCamera);
 
                         // Preparación del encriptado
                         //init_encrypt();
 
-                        //toast.show();
+                        record_toast.show();
                         break;
                 }
 
