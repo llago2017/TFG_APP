@@ -64,6 +64,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             return;
         } else {
             mCamera = getCameraInstance();
+            CameraPreview.setCameraDisplayOrientation(this,0,mCamera);
         }
 
         // Notificación
@@ -76,11 +77,14 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         // Create our Preview view and set it as the content of our activity.
         mPreview = new CameraPreview(this, mCamera);
-        FrameLayout frameLayout = (FrameLayout) findViewById(R.id.camera_preview);
+        FrameLayout frameLayout = findViewById(R.id.camera_preview);
         frameLayout.addView(mPreview);
+
 
         RelativeLayout relativeLayoutControls = (RelativeLayout) findViewById(R.id.controls_layout);
         relativeLayoutControls.bringToFront();
+
+
 
         Button record_button = findViewById(R.id.record_button);
 
@@ -109,6 +113,9 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 return false;
             }
         });
+
+        int layoutwidth = mPreview.getWidth();
+        Log.i(TAG, "ANCHO -> " + layoutwidth);
 
     }
 
@@ -218,12 +225,16 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         }
     }
 
+
+
     /** A safe way to get an instance of the Camera object. */
     public static Camera getCameraInstance() {
 
         Camera c = null;
         try {
             c = Camera.open();
+
+
         }
         catch (Exception e){
             // Camera is not available (in use or does not exist)
