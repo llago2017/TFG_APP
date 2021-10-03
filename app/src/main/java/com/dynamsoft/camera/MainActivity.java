@@ -13,6 +13,7 @@ import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -65,6 +66,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         } else {
             mCamera = getCameraInstance();
             CameraPreview.setCameraDisplayOrientation(this,0,mCamera);
+
         }
 
         // Notificación
@@ -116,6 +118,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         int layoutwidth = mPreview.getWidth();
         Log.i(TAG, "ANCHO -> " + layoutwidth);
+
+
 
     }
 
