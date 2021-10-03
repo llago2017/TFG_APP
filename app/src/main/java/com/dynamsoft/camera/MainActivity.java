@@ -137,10 +137,14 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         recorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
         recorder.setVideoSource(MediaRecorder.VideoSource.DEFAULT);
 
-        // Step 4: Encoders
+        /* Step 4: Encoders
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        recorder.setVideoEncoder(MediaRecorder.VideoEncoder.DEFAULT);
+
+        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+        recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);*/
+
+        CamcorderProfile cpHigh = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
+        recorder.setProfile(cpHigh);
 
         // Set 5: Output file
         recorder.setPreviewDisplay(mPreview.getHolder().getSurface());
