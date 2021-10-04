@@ -1,7 +1,6 @@
 package com.dynamsoft.camera;
 
 import static android.app.PendingIntent.getActivity;
-import static android.support.v4.content.ContextCompat.getSystemService;
 
 import java.io.CharArrayWriter;
 import java.io.IOException;

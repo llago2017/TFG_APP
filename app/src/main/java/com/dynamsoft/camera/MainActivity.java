@@ -4,14 +4,13 @@ package com.dynamsoft.camera;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
@@ -28,6 +27,9 @@ import android.widget.RelativeLayout;
 import android.widget.TextSwitcher;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import java.io.IOException;
 import java.util.List;
@@ -68,6 +70,16 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             CameraPreview.setCameraDisplayOrientation(this,0,mCamera);
 
         }
+
+        // Mostrar ajustes
+        Button settings = findViewById(R.id.settings_button);
+        settings.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Log.i(TAG,"Preferencias");
+                Intent activity2Intent = new Intent(getApplicationContext(), SettingsActivity.class);
+                startActivity(activity2Intent);
+            }
+        });
 
         // Notificación
         LayoutInflater inflater = getLayoutInflater();
