@@ -33,6 +33,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -163,9 +164,23 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         recorder.setProfile(cpHigh);
 
         // Set 5: Output file
+        // SwitchPreference preference change listener
+
+
         recorder.setPreviewDisplay(mPreview.getHolder().getSurface());
         recorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/myrecording.mp4");
-        //recorder.setOutputFile("/dev/null");
+
+        // TEST GET ENABLE/DISABLE SAVE
+       /* SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean isChecked = sharedPreferences.getBoolean("Guardar", false);
+        Toast.makeText(this, "isChecked : " + isChecked, Toast.LENGTH_LONG).show();
+
+        if (isChecked) {
+            recorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/myrecording.mp4");
+        } else {
+            recorder.setOutputFile("/dev/null");
+        } */
+
 
         // Step 5: Prepare configured MediaRecorder
         try {
@@ -186,6 +201,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             recorder = null;
             mCamera.lock();
         }
+        //keepVideo();
 
     }
 
@@ -271,6 +287,23 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             mCamera.release();        // release the camera for other applications
             mCamera = null;
         }
+    }
+
+    void keepVideo() {
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean isChecked = sharedPreferences.getBoolean("Guardar", false);
+        Toast.makeText(this, "isChecked : " + isChecked, Toast.LENGTH_LONG).show();
+
+        // Si es true, solo eliminamos el original y me quedo solo con el encriptado
+        if (isChecked) {
+            // No hacemos nada, se mantiene el archivo encriptado
+        } else {
+            // Se borra el encriptado
+        }
+        // El original se borra en todos los casos
+        File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
+        File file = new File(dir,  "/myrecording.mp4");
+        boolean deleted = file.delete();
     }
 
 }
