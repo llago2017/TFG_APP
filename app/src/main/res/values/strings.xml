@@ -16,4 +16,7 @@
     <string name="attachment_summary_on">Automatically download attachments for incoming emails
     </string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
+    <string name="save_header">Guardar</string>
+    <string name="save_summary_off">El vídeo final encriptado no se almacenará en el dispositivo</string>
+    <string name="save_summary_on">El vídeo final encriptado  se almacenará en el dispositivo</string>
 </resources>

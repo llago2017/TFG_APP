@@ -5,6 +5,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
@@ -30,6 +31,7 @@ import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.preference.PreferenceManager;
 
 import java.io.IOException;
 import java.util.List;
@@ -128,8 +130,10 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             }
         });
 
-        int layoutwidth = mPreview.getWidth();
-        Log.i(TAG, "ANCHO -> " + layoutwidth);
+        // SwitchPreference preference change listener
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean isChecked = sharedPreferences.getBoolean("Guardar", false);
+        Toast.makeText(this, "isChecked : " + isChecked, Toast.LENGTH_LONG).show();
 
 
 

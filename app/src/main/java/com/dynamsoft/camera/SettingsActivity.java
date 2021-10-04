@@ -1,10 +1,15 @@
 package com.dynamsoft.camera;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceManager;
+import androidx.preference.SwitchPreference;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -22,6 +27,13 @@ public class SettingsActivity extends AppCompatActivity {
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
+
+        // Get the preference widgets reference
+
+        // SwitchPreference preference change listener
+       // SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+       // boolean isChecked = sharedPreferences.getBoolean("Guardar", false);
+       // Toast.makeText(this, "isChecked : " + isChecked, Toast.LENGTH_LONG).show();
     }
 
     public static class SettingsFragment extends PreferenceFragmentCompat {
