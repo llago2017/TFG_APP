@@ -59,8 +59,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         super.onCreate(savedInstanceState);
 
         // Hide the window title.
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+      //  requestWindowFeature(Window.FEATURE_NO_TITLE);
+       // getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         setContentView(R.layout.main);
 
@@ -287,6 +287,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         }
     }
 
+    // Llamar después de encriptar
     void keepVideo() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         boolean isChecked = sharedPreferences.getBoolean("Guardar", false);
