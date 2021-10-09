@@ -1,4 +1,4 @@
-package com.dynamsoft.camera;
+package com.myapp.SafeCamera;
 
 
 import android.Manifest;
@@ -12,23 +12,14 @@ import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
-import android.util.FloatMath;
 import android.util.Log;
-import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.RelativeLayout;
-import android.widget.TextSwitcher;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -200,7 +191,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             mCamera.lock();
         }
         //keepVideo();
-
     }
 
 
@@ -373,5 +363,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         float y = event.getY(0) - event.getY(1);
         return (float)Math.sqrt(x * x + y * y);
     }
+
 
 }

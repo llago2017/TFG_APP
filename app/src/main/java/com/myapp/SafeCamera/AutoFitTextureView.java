@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.dynamsoft.camera;
+package com.myapp.SafeCamera;
 
 import android.content.Context;
 import android.util.AttributeSet;

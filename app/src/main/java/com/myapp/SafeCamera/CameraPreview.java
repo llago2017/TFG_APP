@@ -1,8 +1,7 @@
-package com.dynamsoft.camera;
+package com.myapp.SafeCamera;
 
 import static android.app.PendingIntent.getActivity;
 
-import java.io.CharArrayWriter;
 import java.io.IOException;
 import java.util.List;
 
@@ -12,16 +11,9 @@ import android.hardware.Camera;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.hardware.Camera.Size;
-import android.util.SparseIntArray;
-import android.view.Display;
-import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
-import android.widget.FrameLayout;
 
 
 /** A basic Camera preview class */

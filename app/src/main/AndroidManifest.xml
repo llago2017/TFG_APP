@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.dynamsoft.camera">
+    package="com.myapp.SafeCamera">
 
     <uses-permission android:name="android.permission.CAMERA" />
 
@@ -11,6 +11,10 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
+    <!-- Permissions required by GoogleAuthUtil -->
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.MANAGE_ACCOUNTS" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -20,12 +24,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat">
         <activity
-            android:name=".SettingsActivity"
+            android:name="com.myapp.SafeCamera.SettingsActivity"
             android:exported="true"
             android:label="Ajustes"
-            android:parentActivityName=".MainActivity"/>
+            android:parentActivityName="com.myapp.SafeCamera.MainActivity"/>
         <activity
-            android:name=".MainActivity"
+            android:name="com.myapp.SafeCamera.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -1,4 +1,4 @@
-package com.dynamsoft.camera;
+package com.myapp.SafeCamera;
 
 /*
  * Copyright (C) 2013 The Android Open Source Project
