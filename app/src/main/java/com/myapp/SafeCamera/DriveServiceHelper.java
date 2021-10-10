@@ -10,6 +10,7 @@ import android.util.Pair;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.api.client.http.ByteArrayContent;
+import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
@@ -41,8 +42,8 @@ public class DriveServiceHelper {
         return Tasks.call(mExecutor, () -> {
             File metadata = new File()
                     .setParents(Collections.singletonList("root"))
-                    .setMimeType("text/plain")
-                    .setName("Untitled file");
+                    .setMimeType("video/mp4")
+                    .setName("myrecording.mp4");
 
             File googleFile = mDriveService.files().create(metadata).execute();
             if (googleFile == null) {
@@ -50,6 +51,30 @@ public class DriveServiceHelper {
             }
 
             return googleFile.getId();
+        });
+    }
+
+    public Task<String> createFilePDF(String filePath) {
+        return Tasks.call(mExecutor, () -> {
+            File metadata = new File();
+            metadata.setName("MyPDFFile");
+
+            java.io.File file = new java.io.File(filePath);
+
+            FileContent mediaContent = new FileContent("application/pdf", file);
+
+           File myFile = null;
+           try {
+               myFile = mDriveService.files().create(metadata, mediaContent).execute();
+           } catch (Exception e) {
+               e.printStackTrace();
+           }
+
+           if (myFile == null) {
+               throw new IOException("Null resilt when requesting file creation");
+           }
+
+            return myFile.getId();
         });
     }
 

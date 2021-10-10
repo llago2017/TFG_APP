@@ -4,12 +4,15 @@ package com.myapp.SafeCamera;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -18,19 +21,38 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.Scope;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.DriveScopes;
+
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.util.Collections;
 import java.util.List;
 
-public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback {
+public class MainActivity<DriveClient, DriveResourceClient> extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback {
 
     private Camera mCamera;
     private CameraPreview mPreview;
@@ -43,16 +65,28 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     private static final int REQUEST_MICRO_PERMISSION = 2;
     private static final int REQUEST_WRITE_PERMISSION = 3;
 
+    // Drive
+    private static final int REQUEST_CODE_SIGN_IN = 1;
+    private static final int REQUEST_CODE_OPEN_DOCUMENT = 2;
+    private Bitmap mBitmapToSave;
+
+    private GoogleSignInClient mGoogleSignInClient;
+    private DriveClient mDriveClient;
+    private DriveResourceClient mDriveResourceClient;
+
+    private DriveServiceHelper driveServiceHelper;
+    private String mOpenFileId;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+
+
         // Hide the window title.
       //  requestWindowFeature(Window.FEATURE_NO_TITLE);
        // getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-
         setContentView(R.layout.main);
 
 
@@ -64,6 +98,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             requestWritePermission();
             return;
         } else {
+
             mCamera = getCameraInstance();
             CameraPreview.setCameraDisplayOrientation(this,0,mCamera);
 
@@ -78,6 +113,16 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 startActivity(activity2Intent);
             }
         });
+
+
+        Button login = findViewById(R.id.login);
+        login.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Log.i(TAG,"Inicio de sesión");
+                requestSignIn();
+            }
+        });
+
 
         // Notificación
         LayoutInflater inflater = getLayoutInflater();
@@ -97,8 +142,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         relativeLayoutControls.bringToFront();
 
 
-
-        Button record_button = findViewById(R.id.record_button);
+      Button record_button = findViewById(R.id.record_button);
 
         record_button.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -126,7 +170,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 return false;
             }
         });
-
     }
 
     void init_recorder(Camera mCamera, CameraPreview mPreview) {
@@ -190,6 +233,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             recorder = null;
             mCamera.lock();
         }
+
         //keepVideo();
     }
 
@@ -249,7 +293,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 }
                 return;
             }
-
         }
     }
 
@@ -261,8 +304,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         Camera c = null;
         try {
             c = Camera.open();
-
-
         }
         catch (Exception e){
             // Camera is not available (in use or does not exist)
@@ -364,5 +405,67 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         return (float)Math.sqrt(x * x + y * y);
     }
 
+    // DRIVE
+
+    /**
+     * Starts a sign-in activity using {@link #REQUEST_CODE_SIGN_IN}.
+     */
+    private void requestSignIn() {
+        Log.d(TAG, "Requesting sign-in");
+
+        // Configure sign-in to request the user's ID, email address, and basic
+        // profile. ID and basic profile are included in DEFAULT_SIGN_IN.
+        GoogleSignInOptions signInOptions =
+                new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                        .requestEmail()
+                        .requestScopes(new Scope(DriveScopes.DRIVE_FILE))
+                        .build();
+        GoogleSignInClient client = GoogleSignIn.getClient(this, signInOptions);
+
+        // The result of the sign-in Intent is handled in onActivityResult.
+        startActivityForResult(client.getSignInIntent(), 400);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case 400:
+                if (resultCode == RESULT_OK) {
+                    Log.i(TAG, "On activity result");
+                    handleSignInIntent(data);
+                }
+                break;
+        }
+    }
+
+    private void handleSignInIntent(Intent data) {
+        GoogleSignIn.getSignedInAccountFromIntent(data)
+            .addOnSuccessListener(new OnSuccessListener<GoogleSignInAccount>() {
+                @Override
+                public void onSuccess(GoogleSignInAccount googleSignInAccount) {
+                    GoogleAccountCredential credential = GoogleAccountCredential
+                            .usingOAuth2(MainActivity.this, Collections.singleton(DriveScopes.DRIVE_FILE));
+
+                    credential.setSelectedAccount(googleSignInAccount.getAccount());
+
+                    Drive googleDriveService = new Drive.Builder(
+                            AndroidHttp.newCompatibleTransport(),
+                            new GsonFactory(),
+                            credential)
+                            .setApplicationName("Safe Camera")
+                            .build();
+
+                    driveServiceHelper = new DriveServiceHelper(googleDriveService);
+                }
+            })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+
+                    }
+                });
+
+    }
 
 }
