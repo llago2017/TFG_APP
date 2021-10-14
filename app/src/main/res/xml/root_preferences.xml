@@ -12,4 +12,18 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Nube">
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="Drive"
+        android:title="Google Drive"
+        android:disableDependentsState="false" />
+        <Preference
+            android:title="Inicio de sesión"
+            android:key="@string/loginbutton"
+            android:summary="@string/login_summary"
+            android:dependency="Drive" />
+    </PreferenceCategory>
+
+
 </PreferenceScreen>

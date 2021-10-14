@@ -14,10 +14,14 @@
         <entry key="app/src/main/res/layout-land/main.xml" value="0.14594356261022928" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.1" />
         <entry key="app/src/main/res/layout/controls.xml" value="0.18" />
+        <entry key="app/src/main/res/layout/fragment_login.xml" value="0.1" />
+        <entry key="app/src/main/res/layout/logginbutton.xml" value="0.26197916666666665" />
+        <entry key="app/src/main/res/layout/loginbutton.xml" value="0.1" />
+        <entry key="app/src/main/res/layout/loginbuttons.xml" value="0.153125" />
         <entry key="app/src/main/res/layout/main.xml" value="0.13541666666666666" />
         <entry key="app/src/main/res/layout/settings_activity.xml" value="0.1" />
         <entry key="app/src/main/res/layout/toast1.xml" value="0.13125" />
-        <entry key="app/src/main/res/xml/root_preferences.xml" value="0.5" />
+        <entry key="app/src/main/res/xml/root_preferences.xml" value="0.18703703703703703" />
       </map>
     </option>
   </component>

@@ -43,6 +43,7 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.http.FileContent;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
@@ -111,14 +112,34 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             }
         });
 
+        // Inicio de sesión de drive
 
-        Button login = findViewById(R.id.login);
-        login.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                Log.i(TAG,"Inicio de sesión");
-                signIn();
-            }
-        });
+
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean Drive = sharedPreferences.getBoolean("Drive", false);
+        Toast.makeText(this, "Drive : " + Drive, Toast.LENGTH_LONG).show();
+        if (Drive) {
+            Button login = findViewById(R.id.login);
+            login.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    Log.i(TAG,"Inicio de sesión");
+                    signIn();
+                }
+            });
+            Button logout = findViewById(R.id.logout);
+            logout.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    Log.i(TAG,"Inicio de sesión");
+                    signOut();
+                }
+            });
+        } else {
+
+            findViewById(R.id.login).setVisibility(View.GONE);
+            findViewById(R.id.logout).setVisibility(View.GONE);
+        }
+
+
 
 
         // Notificación
@@ -543,17 +564,24 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 });
     }
     // [END revokeAccess]
-
     private void updateUI(@Nullable GoogleSignInAccount account) {
-        if (account != null) {
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean Drive = sharedPreferences.getBoolean("Drive", false);
 
-            findViewById(R.id.login).setVisibility(View.GONE);
-        } else {
+        if (Drive) {
+            if (account != null) {
 
-            findViewById(R.id.login).setVisibility(View.VISIBLE);
+                findViewById(R.id.login).setVisibility(View.GONE);
+                findViewById(R.id.logout).setVisibility(View.VISIBLE);
+            } else {
+
+                findViewById(R.id.login).setVisibility(View.VISIBLE);
+                findViewById(R.id.logout).setVisibility(View.GONE);
+            }
+
         }
-    }
 
+    }
 
 
 }
