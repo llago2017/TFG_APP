@@ -7,7 +7,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
@@ -19,6 +18,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
@@ -29,31 +29,37 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 
+import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.Scopes;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Scope;
+import com.google.android.gms.drive.DriveContents;
+import com.google.android.gms.drive.DriveFolder;
+import com.google.android.gms.drive.DriveResourceClient;
+import com.google.android.gms.drive.MetadataChangeSet;
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
-import com.google.api.client.http.FileContent;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
+
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback {
+public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback,
+                                                      GoogleApiClient.OnConnectionFailedListener,
+                                                      GoogleApiClient.ConnectionCallbacks {
 
     private Camera mCamera;
     private CameraPreview mPreview;
@@ -61,6 +67,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     final String TAG = "MainActivity";
 
     float mDist;
+    int fileId;
 
     private static final int REQUEST_CAMERA_PERMISSION = 1;
     private static final int REQUEST_MICRO_PERMISSION = 2;
@@ -69,11 +76,12 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     private static final int RC_SIGN_IN = 9001;
 
     // Drive
+    private DriveServiceHelper mDriveServiceHelper;
 
     private GoogleSignInClient mGoogleSignInClient;
-
-    private DriveServiceHelper driveServiceHelper;
     private String mOpenFileId;
+
+
     private GoogleApiClient mGoogleApiClient;
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -127,7 +135,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         // options specified by gso.
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
         // [END build_client]
-
 
 
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -267,9 +274,30 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             mCamera.lock();
         }
 
+        createFile();
+        //createDriveFile();
+        saveFile();
+        Log.i(TAG, "Archivo guardado");
         //keepVideo();
     }
 
+
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        // GoogleApiClient connection failed, most API calls will not work...
+        Log.i(TAG, "Fallo al conectar");
+    }
+
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        // GoogleApiClient is connected, API calls should succeed...
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        // ...
+    }
 
     @Override
     protected void onPause()
@@ -473,6 +501,24 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         try {
             // Signed in successfully, show authenticated U
             GoogleSignInAccount account = completedTask.getResult(ApiException.class);
+            // The DriveServiceHelper encapsulates all REST API and SAF functionality.
+            // Its instantiation is required before handling any onClick actions.
+            GoogleAccountCredential credential =
+                    GoogleAccountCredential.usingOAuth2(
+                            this, Collections.singleton(DriveScopes.DRIVE_FILE));
+            credential.setSelectedAccount(account.getAccount());
+            Drive googleDriveService =
+                    new Drive.Builder(
+                            AndroidHttp.newCompatibleTransport(),
+                            new GsonFactory(),
+                            credential)
+                            .setApplicationName("Safe Camera")
+                            .build();
+            mDriveServiceHelper = new DriveServiceHelper(googleDriveService);
+            if (mDriveServiceHelper != null) {
+                createFile();
+            }
+            Log.d(TAG, "Signed in as " + account.getEmail());
             updateUI(account);
         } catch (ApiException e) {
             // Signed out, show unauthenticated UI.
@@ -533,6 +579,78 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         }
 
+    }
+
+    protected void showMessage(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+
+  /*  @SuppressLint("StringFormatInvalid")
+    private void createDriveFile() {
+        // Get currently signed in account (or null)
+        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
+
+        // Synchronously check for necessary permissions
+        if (!GoogleSignIn.hasPermissions(account, Drive.SCOPE_FILE)) {
+            // Note: this launches a sign-in flow, however the code to detect
+            // the result of the sign-in flow and retry the API call is not
+            // shown here.
+            GoogleSignIn.requestPermissions(this, RC_SIGN_IN,
+                    account, Drive.SCOPE_FILE);
+            return;
+        }
+
+        DriveResourceClient client = Drive.getDriveResourceClient(this, account);
+        client.createContents()
+                .addOnCompleteListener(task ->
+                        Log.i(TAG,"Parece que fiunciona"));
+    }*/
+
+    /**
+     * Retrieves the title and content of a file identified by {@code fileId} and populates the UI.
+     */
+    private void readFile(String fileId) {
+        if (mDriveServiceHelper != null) {
+            Log.i(TAG, "Reading file " + fileId);
+
+            mDriveServiceHelper.readFile(fileId)
+                    .addOnSuccessListener(nameAndContent -> {
+
+                        setReadWriteMode(fileId);
+                    })
+                    .addOnFailureListener(exception ->
+                            Log.e(TAG, "Couldn't read file.", exception));
+        }
+    }
+
+    private void createFile() {
+        if (mDriveServiceHelper != null) {
+            Log.i(TAG, "Creating a file.");
+
+            mDriveServiceHelper.createFile()
+                    .addOnSuccessListener(fileId -> readFile(fileId))
+                    .addOnFailureListener(exception ->
+                            Log.e(TAG, "Couldn't create file.", exception));
+        }
+        Log.i(TAG, "mDriveServiceHelper es null");
+    }
+
+    private void saveFile() {
+        if (mDriveServiceHelper != null && mOpenFileId != null) {
+            Log.i(TAG, "Saving " + mOpenFileId);
+
+            String fileName = "prueba";
+            String fileContent = "Hola mundo";
+
+            mDriveServiceHelper.saveFile(mOpenFileId, fileName, fileContent)
+                    .addOnFailureListener(exception ->
+                            Log.e(TAG, "Unable to save file via REST.", exception));
+        }
+    }
+
+
+    private void setReadWriteMode(String fileId) {
+        mOpenFileId = fileId;
     }
 
 
