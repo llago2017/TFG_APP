@@ -20,4 +20,6 @@
     <string name="invalid_password">Password must be >5 characters</string>
     <string name="login_failed">"Login failed"</string>
     <string name="login_summary">Inicia sesión en Google Drive para que tus videos se almacenen en esta plataforma de forma segura.</string>
+    <string name="file_created">Se ha creado</string>
+    <string name="file_create_error">Error</string>
 </resources>

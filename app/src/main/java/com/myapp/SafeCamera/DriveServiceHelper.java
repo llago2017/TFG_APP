@@ -10,7 +10,6 @@ import android.util.Pair;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.api.client.http.ByteArrayContent;
-import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
@@ -19,7 +18,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Collections;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -35,6 +33,7 @@ public class DriveServiceHelper {
         mDriveService = driveService;
     }
 
+
     /**
      * Creates a text file in the user's My Drive folder and returns its file ID.
      */
@@ -42,8 +41,8 @@ public class DriveServiceHelper {
         return Tasks.call(mExecutor, () -> {
             File metadata = new File()
                     .setParents(Collections.singletonList("root"))
-                    .setMimeType("video/mp4")
-                    .setName("myrecording.mp4");
+                    .setMimeType("text/plain")
+                    .setName("Untitled file");
 
             File googleFile = mDriveService.files().create(metadata).execute();
             if (googleFile == null) {
@@ -54,34 +53,6 @@ public class DriveServiceHelper {
         });
     }
 
-    public Task<String> createFilePDF(String filePath) {
-        return Tasks.call(mExecutor, () -> {
-            File metadata = new File();
-            metadata.setName("MyPDFFile");
-
-            java.io.File file = new java.io.File(filePath);
-
-            FileContent mediaContent = new FileContent("application/pdf", file);
-
-           File myFile = null;
-           try {
-               myFile = mDriveService.files().create(metadata, mediaContent).execute();
-           } catch (Exception e) {
-               e.printStackTrace();
-           }
-
-           if (myFile == null) {
-               throw new IOException("Null resilt when requesting file creation");
-           }
-
-            return myFile.getId();
-        });
-    }
-
-    /**
-     * Opens the file identified by {@code fileId} and returns a {@link Pair} of its name and
-     * contents.
-     */
     public Task<Pair<String, String>> readFile(String fileId) {
         return Tasks.call(mExecutor, () -> {
             // Retrieve the metadata as a File object.
@@ -131,12 +102,8 @@ public class DriveServiceHelper {
      * Developer's Console</a> and be submitted to Google for verification.</p>
      */
     public Task<FileList> queryFiles() {
-        return Tasks.call(mExecutor, new Callable<FileList>() {
-            @Override
-            public FileList call() throws Exception {
-                return mDriveService.files().list().setSpaces("drive").execute();
-            }
-        });
+        return Tasks.call(mExecutor, () ->
+                mDriveService.files().list().setSpaces("drive").execute());
     }
 
     /**

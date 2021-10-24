@@ -58,4 +58,6 @@ dependencies {
         exclude group: 'org.apache.httpcomponents'
     }
 
+    compile 'com.google.android.gms:play-services-drive:17.0.0'
+
 }

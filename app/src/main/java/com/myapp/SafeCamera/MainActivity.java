@@ -475,6 +475,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         // Check if the user is already signed in and all required scopes are granted
         GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
         if (account != null && GoogleSignIn.hasPermissions(account, new Scope(Scopes.DRIVE_FULL))) {
+            initializeDriveService(account);
             updateUI(account);
         } else {
             updateUI(null);
@@ -501,23 +502,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         try {
             // Signed in successfully, show authenticated U
             GoogleSignInAccount account = completedTask.getResult(ApiException.class);
-            // The DriveServiceHelper encapsulates all REST API and SAF functionality.
-            // Its instantiation is required before handling any onClick actions.
-            GoogleAccountCredential credential =
-                    GoogleAccountCredential.usingOAuth2(
-                            this, Collections.singleton(DriveScopes.DRIVE_FILE));
-            credential.setSelectedAccount(account.getAccount());
-            Drive googleDriveService =
-                    new Drive.Builder(
-                            AndroidHttp.newCompatibleTransport(),
-                            new GsonFactory(),
-                            credential)
-                            .setApplicationName("Safe Camera")
-                            .build();
-            mDriveServiceHelper = new DriveServiceHelper(googleDriveService);
-            if (mDriveServiceHelper != null) {
-                createFile();
-            }
+            initializeDriveService(account);
             Log.d(TAG, "Signed in as " + account.getEmail());
             updateUI(account);
         } catch (ApiException e) {
@@ -527,6 +512,23 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         }
     }
     // [END handleSignInResult]
+
+    public void initializeDriveService(GoogleSignInAccount account) {
+        // The DriveServiceHelper encapsulates all REST API and SAF functionality.
+        // Its instantiation is required before handling any onClick actions.
+        GoogleAccountCredential credential =
+                GoogleAccountCredential.usingOAuth2(
+                        this, Collections.singleton(DriveScopes.DRIVE_FILE));
+        credential.setSelectedAccount(account.getAccount());
+        Drive googleDriveService =
+                new Drive.Builder(
+                        AndroidHttp.newCompatibleTransport(),
+                        new GsonFactory(),
+                        credential)
+                        .setApplicationName("Safe Camera")
+                        .build();
+        mDriveServiceHelper = new DriveServiceHelper(googleDriveService);
+    }
 
     // [START signIn]
     public void signIn() {

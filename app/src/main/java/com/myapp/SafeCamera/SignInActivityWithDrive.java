@@ -30,7 +30,7 @@ public class SignInActivityWithDrive extends AppCompatActivity implements
     private static final String TAG = "SignInActivity";
     private static final int RC_SIGN_IN = 9001;
 
-    private GoogleSignInClient mGoogleSignInClient;
+    private static GoogleSignInClient mGoogleSignInClient;
 
     private TextView mStatusTextView;
 
@@ -56,9 +56,12 @@ public class SignInActivityWithDrive extends AppCompatActivity implements
 
         // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
         if (requestCode == RC_SIGN_IN) {
+            // The Task returned from this call is always completed, no need to attach
+            // a listener.
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             handleSignInResult(task);
         }
+
     }
     // [END onActivityResult]
 
@@ -87,13 +90,14 @@ public class SignInActivityWithDrive extends AppCompatActivity implements
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestScopes(new Scope(Scopes.DRIVE_APPFOLDER))
                 .requestEmail()
+                .requestServerAuthCode("76078661648-p38um3e7hf4f7m45a5q24gcvihs7p2e7.apps.googleusercontent.com")
                 .build();
         // [END configure_signin]
 
         // [START build_client]
         // Build a GoogleSignInClient with access to the Google Sign-In API and the
         // options specified by gso.
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+        mGoogleSignInClient = GoogleSignIn.getClient(mGoogleSignInClient.getApplicationContext(), gso);
         // [END build_client]
 
         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
