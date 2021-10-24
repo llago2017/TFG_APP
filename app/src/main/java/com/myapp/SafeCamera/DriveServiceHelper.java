@@ -4,12 +4,16 @@ import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.nfc.Tag;
+import android.os.Environment;
 import android.provider.OpenableColumns;
+import android.util.Log;
 import android.util.Pair;
 
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.api.client.http.ByteArrayContent;
+import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
@@ -28,6 +32,7 @@ import java.util.concurrent.Executors;
 public class DriveServiceHelper {
     private final Executor mExecutor = Executors.newSingleThreadExecutor();
     private final Drive mDriveService;
+    private final String TAG = "DriveServiceHelper";
 
     public DriveServiceHelper(Drive driveService) {
         mDriveService = driveService;
@@ -50,6 +55,31 @@ public class DriveServiceHelper {
             }
 
             return googleFile.getId();
+        });
+    }
+
+    public Task<String> createVideo() {
+        return Tasks.call(mExecutor, () -> {
+            File metadata = new File()
+                    .setParents(Collections.singletonList("root"))
+                    .setMimeType("video/mp4")
+                    .setName("SafeVideo.mp4");
+
+            java.io.File filePath = new java.io.File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/myrecording.mp4");
+            FileContent mediaContent = new FileContent("video/mp4", filePath);
+
+            File file = mDriveService.files().create(metadata, mediaContent)
+                    .setFields("id")
+                    .execute();
+
+            //File googleFile = mDriveService.files().create(metadata).execute();
+            if (file == null) {
+                throw new IOException("Null result when requesting file creation.");
+            }
+
+            Log.i(TAG,"File ID: " + file.getId());
+
+            return file.getId();
         });
     }
 

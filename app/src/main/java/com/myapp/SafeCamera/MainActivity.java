@@ -47,6 +47,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.http.FileContent;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
@@ -276,7 +277,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         createFile();
         //createDriveFile();
-        saveFile();
+        //saveFile();
+        createVideo();
         Log.i(TAG, "Archivo guardado");
         //keepVideo();
     }
@@ -637,6 +639,18 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         Log.i(TAG, "mDriveServiceHelper es null");
     }
 
+    private void createVideo() {
+        if (mDriveServiceHelper != null) {
+            Log.i(TAG, "Creating a video.");
+
+            mDriveServiceHelper.createVideo()
+                    .addOnSuccessListener(fileId -> readFile(fileId))
+                    .addOnFailureListener(exception ->
+                            Log.e(TAG, "Couldn't create file.", exception));
+        }
+        Log.i(TAG, "mDriveServiceHelper es null");
+    }
+
     private void saveFile() {
         if (mDriveServiceHelper != null && mOpenFileId != null) {
             Log.i(TAG, "Saving " + mOpenFileId);
@@ -654,6 +668,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     private void setReadWriteMode(String fileId) {
         mOpenFileId = fileId;
     }
+
+
 
 
 }
