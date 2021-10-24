@@ -113,6 +113,21 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         });
 
         // Inicio de sesión de drive
+        // [START configure_signin]
+        // Configure sign-in to request the user's ID, email address, and basic
+        // profile. ID and basic profile are included in DEFAULT_SIGN_IN.
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestScopes(new Scope(Scopes.DRIVE_FULL))
+                .requestEmail()
+                .build();
+        // [END configure_signin]
+
+        // [START build_client]
+        // Build a GoogleSignInClient with access to the Google Sign-In API and the
+        // options specified by gso.
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+        // [END build_client]
+
 
 
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -425,61 +440,13 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
     // DRIVE
 
-    /**
-     * Starts a sign-in activity
-     */
-    private void requestSignIn() {
-        Log.d(TAG, "Requesting sign-in");
-        // Configure sign-in to request the user's ID, email address, and basic
-        // profile. ID and basic profile are included in DEFAULT_SIGN_IN.
-        GoogleSignInOptions signInOptions =
-                new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestEmail()
-                        .requestScopes(new Scope(DriveScopes.DRIVE_FILE))
-                        .build();
-        GoogleSignInClient client = GoogleSignIn.getClient(this, signInOptions);
-
-        // The result of the sign-in Intent is handled in onActivityResult.
-        startActivityForResult(client.getSignInIntent(), 400);
-    }
-
-
-    private void handleSignInIntent(Intent data) {
-        GoogleSignIn.getSignedInAccountFromIntent(data)
-            .addOnSuccessListener(new OnSuccessListener<GoogleSignInAccount>() {
-                @Override
-                public void onSuccess(GoogleSignInAccount googleSignInAccount) {
-                    GoogleAccountCredential credential = GoogleAccountCredential
-                            .usingOAuth2(MainActivity.this, Collections.singleton(DriveScopes.DRIVE_FILE));
-
-                    credential.setSelectedAccount(googleSignInAccount.getAccount());
-
-                    Drive googleDriveService = new Drive.Builder(
-                            AndroidHttp.newCompatibleTransport(),
-                            new GsonFactory(),
-                            credential)
-                            .setApplicationName("Safe Camera")
-                            .build();
-
-                    driveServiceHelper = new DriveServiceHelper(googleDriveService);
-                }
-            })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-
-                    }
-                });
-
-    }
-
     @Override
     public void onStart() {
         super.onStart();
 
         // Check if the user is already signed in and all required scopes are granted
         GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
-        if (account != null && GoogleSignIn.hasPermissions(account, new Scope(Scopes.DRIVE_APPFOLDER))) {
+        if (account != null && GoogleSignIn.hasPermissions(account, new Scope(Scopes.DRIVE_FULL))) {
             updateUI(account);
         } else {
             updateUI(null);
@@ -517,21 +484,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
     // [START signIn]
     public void signIn() {
-
-        // [START configure_signin]
-        // Configure sign-in to request the user's ID, email address, and basic
-        // profile. ID and basic profile are included in DEFAULT_SIGN_IN.
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestScopes(new Scope(Scopes.DRIVE_APPFOLDER))
-                .requestEmail()
-                .build();
-        // [END configure_signin]
-
-        // [START build_client]
-        // Build a GoogleSignInClient with access to the Google Sign-In API and the
-        // options specified by gso.
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
-        // [END build_client]
 
         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
         startActivityForResult(signInIntent, RC_SIGN_IN);
