@@ -73,7 +73,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     private static final int REQUEST_CAMERA_PERMISSION = 1;
     private static final int REQUEST_MICRO_PERMISSION = 2;
     private static final int REQUEST_WRITE_PERMISSION = 3;
-
+    private static final int REQUEST_CODE = 1001;
     private static final int RC_SIGN_IN = 9001;
 
     // Drive
@@ -99,17 +99,24 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         // Create an instance of Camera
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                + ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                + ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
-            requestCameraPermission();
-            requestMicroPermission();
-            requestWritePermission();
-            return;
-        } else {
+            //requestCameraPermission();
+            //requestMicroPermission();
+            //requestWritePermission();
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{
+                            Manifest.permission.CAMERA,
+                            Manifest.permission.RECORD_AUDIO,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    },
+                    REQUEST_CODE);
+        }
 
             mCamera = getCameraInstance();
             CameraPreview.setCameraDisplayOrientation(this,0,mCamera);
-
-        }
 
         // Mostrar ajustes
         Button settings = findViewById(R.id.settings_button);
@@ -310,15 +317,16 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     }
 
     private void requestCameraPermission() {
-        requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+
     }
 
     private void requestMicroPermission() {
-        requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_MICRO_PERMISSION);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_MICRO_PERMISSION);
     }
 
     private void requestWritePermission() {
-        requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_WRITE_PERMISSION);
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_MICRO_PERMISSION);
     }
 
     @Override
@@ -356,6 +364,25 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 }
                 return;
             }
+
+            case REQUEST_CODE:
+                // When request is cancelled, the results array are empty
+                if(
+                        (grantResults.length >0) &&
+                                (grantResults[0]
+                                        + grantResults[1]
+                                        + grantResults[2]
+                                        == PackageManager.PERMISSION_GRANTED
+                                )
+                ){
+                    // Permissions are granted
+                    Toast.makeText(getApplicationContext(),"Permissions granted.",Toast.LENGTH_SHORT).show();
+
+                }else {
+                    // Permissions are denied
+                    Toast.makeText(getApplicationContext(),"Permissions denied.",Toast.LENGTH_SHORT).show();
+                }
+                return;
         }
     }
 
