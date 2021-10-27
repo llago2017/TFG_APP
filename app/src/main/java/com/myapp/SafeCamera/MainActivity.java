@@ -520,6 +520,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             GoogleSignInAccount account = completedTask.getResult(ApiException.class);
             initializeDriveService(account);
             Log.d(TAG, "Signed in as " + account.getEmail());
+
+            CameraPreview.surfaceCreated();
             updateUI(account);
         } catch (ApiException e) {
             // Signed out, show unauthenticated UI.

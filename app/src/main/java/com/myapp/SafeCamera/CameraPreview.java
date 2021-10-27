@@ -3,6 +3,7 @@ package com.myapp.SafeCamera;
 import static android.app.PendingIntent.getActivity;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 
 import android.app.Activity;
@@ -32,6 +33,10 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         // underlying surface is created and destroyed.
         mHolder = getHolder();
         mHolder.addCallback(this);
+    }
+
+    public static void surfaceCreated() {
+        CameraPreview.surfaceCreated();
     }
 
 
