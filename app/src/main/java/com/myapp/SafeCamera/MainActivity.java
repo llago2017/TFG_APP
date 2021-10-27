@@ -18,7 +18,6 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
@@ -29,7 +28,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 
-import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -39,15 +37,10 @@ import com.google.android.gms.common.Scopes;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Scope;
-import com.google.android.gms.drive.DriveContents;
-import com.google.android.gms.drive.DriveFolder;
-import com.google.android.gms.drive.DriveResourceClient;
-import com.google.android.gms.drive.MetadataChangeSet;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
-import com.google.api.client.http.FileContent;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
@@ -55,7 +48,9 @@ import com.google.api.services.drive.DriveScopes;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback,
@@ -68,7 +63,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     final String TAG = "MainActivity";
 
     float mDist;
-    int fileId;
+    String filename;
+    File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
 
     private static final int REQUEST_CAMERA_PERMISSION = 1;
     private static final int REQUEST_MICRO_PERMISSION = 2;
@@ -248,7 +244,11 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
 
         recorder.setPreviewDisplay(mPreview.getHolder().getSurface());
-        recorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/myrecording.mp4");
+
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMddHHmm");
+        filename = "/" + dateFormat.format(new Date()) + "_SafeCamera.mp4";
+        recorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + filename);
 
         // TEST GET ENABLE/DISABLE SAVE
        /* SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -282,10 +282,10 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             mCamera.lock();
         }
 
-        createFile();
+        //createFile();
         //createDriveFile();
         //saveFile();
-        createVideo();
+        createVideo(filename);
         Log.i(TAG, "Archivo guardado");
         //keepVideo();
     }
@@ -314,19 +314,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         super.onPause();
         releaseCamera();
 
-    }
-
-    private void requestCameraPermission() {
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
-
-    }
-
-    private void requestMicroPermission() {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_MICRO_PERMISSION);
-    }
-
-    private void requestWritePermission() {
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_MICRO_PERMISSION);
     }
 
     @Override
@@ -666,11 +653,11 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         Log.i(TAG, "mDriveServiceHelper es null");
     }
 
-    private void createVideo() {
+    private void createVideo(String filename) {
         if (mDriveServiceHelper != null) {
             Log.i(TAG, "Creating a video.");
 
-            mDriveServiceHelper.createVideo()
+            mDriveServiceHelper.createVideo(filename)
                     .addOnSuccessListener(fileId -> readFile(fileId))
                     .addOnFailureListener(exception ->
                             Log.e(TAG, "Couldn't create file.", exception));

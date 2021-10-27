@@ -58,14 +58,14 @@ public class DriveServiceHelper {
         });
     }
 
-    public Task<String> createVideo() {
+    public Task<String> createVideo(String filename) {
         return Tasks.call(mExecutor, () -> {
             File metadata = new File()
                     .setParents(Collections.singletonList("root"))
                     .setMimeType("video/mp4")
-                    .setName("SafeVideo.mp4");
+                    .setName(filename);
 
-            java.io.File filePath = new java.io.File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/myrecording.mp4");
+            java.io.File filePath = new java.io.File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + filename);
             FileContent mediaContent = new FileContent("video/mp4", filePath);
 
             File file = mDriveService.files().create(metadata, mediaContent)
