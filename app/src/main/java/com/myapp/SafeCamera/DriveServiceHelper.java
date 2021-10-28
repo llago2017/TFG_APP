@@ -74,6 +74,7 @@ public class DriveServiceHelper {
             // Carpeta en drive
             String pageToken = null;
             Boolean DirectoryExists = false;
+            String folderID = "";
             do {
                 FileList result = mDriveService.files().list()
                         .setQ("mimeType='application/vnd.google-apps.folder'")
@@ -86,6 +87,7 @@ public class DriveServiceHelper {
                             file.getName();
                             if (file.getName().equals("SafeCamera")) {
                                 DirectoryExists = true;
+                                folderID = file.getId();
                             }
                 }
                 pageToken = result.getNextPageToken();
@@ -98,8 +100,12 @@ public class DriveServiceHelper {
                         .setMimeType("application/vnd.google-apps.folder")
                         .setName("SafeCamera");
                 mDriveService.files().create(folder).execute();
+                folderID = folder.getId();
 
             }
+
+            // Añado el contenido en la carpeta
+            metadata.setParents(Collections.singletonList(folderID));
 
 
             File file = mDriveService.files().create(metadata, mediaContent)
