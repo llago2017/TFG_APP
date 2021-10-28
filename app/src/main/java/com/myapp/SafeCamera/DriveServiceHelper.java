@@ -10,6 +10,8 @@ import android.provider.OpenableColumns;
 import android.util.Log;
 import android.util.Pair;
 
+import com.google.android.gms.drive.DriveFolder;
+import com.google.android.gms.drive.MetadataChangeSet;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.api.client.http.ByteArrayContent;
@@ -69,6 +71,37 @@ public class DriveServiceHelper {
             java.io.File filePath = new java.io.File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/SafeCamera/" + filename);
             FileContent mediaContent = new FileContent("video/mp4", filePath);
 
+            // Carpeta en drive
+            String pageToken = null;
+            Boolean DirectoryExists = false;
+            do {
+                FileList result = mDriveService.files().list()
+                        .setQ("mimeType='application/vnd.google-apps.folder'")
+                        .setSpaces("drive")
+                        .setFields("nextPageToken, files(id, name)")
+                        .setPageToken(pageToken)
+                        .execute();
+                for (File file : result.getFiles()) {
+                    //System.out.printf("Found file: %s (%s)\n",
+                            file.getName();
+                            if (file.getName().equals("SafeCamera")) {
+                                DirectoryExists = true;
+                            }
+                }
+                pageToken = result.getNextPageToken();
+            } while (pageToken != null && !DirectoryExists);
+
+            if (!DirectoryExists) {
+                Log.i(TAG, "El directorio no existe, creando carpeta");
+                File folder = new File()
+                        .setParents(Collections.singletonList("root"))
+                        .setMimeType("application/vnd.google-apps.folder")
+                        .setName("SafeCamera");
+                mDriveService.files().create(folder).execute();
+
+            }
+
+
             File file = mDriveService.files().create(metadata, mediaContent)
                     .setFields("id")
                     .execute();
@@ -83,6 +116,7 @@ public class DriveServiceHelper {
             return file.getId();
         });
     }
+
 
     public Task<Pair<String, String>> readFile(String fileId) {
         return Tasks.call(mExecutor, () -> {
