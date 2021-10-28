@@ -92,6 +92,12 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
        // getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.main);
 
+        File file = new File(dir + "/SafeCamera/");
+
+        if (!file.isDirectory()) {
+            file.mkdirs();
+        }
+        dir = file;
 
         // Create an instance of Camera
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -247,8 +253,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMddHHmm");
-        filename = "/" + dateFormat.format(new Date()) + "_SafeCamera.mp4";
-        recorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + filename);
+        filename = dateFormat.format(new Date()) + "_SafeCamera.mp4";
+        recorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/SafeCamera/" + filename);
 
         // TEST GET ENABLE/DISABLE SAVE
        /* SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);

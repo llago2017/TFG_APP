@@ -65,7 +65,8 @@ public class DriveServiceHelper {
                     .setMimeType("video/mp4")
                     .setName(filename);
 
-            java.io.File filePath = new java.io.File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + filename);
+            Log.i(TAG, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/SafeCamera/" + filename );
+            java.io.File filePath = new java.io.File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/SafeCamera/" + filename);
             FileContent mediaContent = new FileContent("video/mp4", filePath);
 
             File file = mDriveService.files().create(metadata, mediaContent)
