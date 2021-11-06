@@ -10,8 +10,12 @@ import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
+import android.security.keystore.KeyProtection;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -24,6 +28,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
@@ -47,11 +52,35 @@ import com.google.api.services.drive.DriveScopes;
 
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+
+import javax.crypto.Cipher;
+import javax.crypto.CipherOutputStream;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback,
                                                       GoogleApiClient.OnConnectionFailedListener,
@@ -80,16 +109,16 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
 
     private GoogleApiClient mGoogleApiClient;
+
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
 
-
         // Hide the window title.
-      //  requestWindowFeature(Window.FEATURE_NO_TITLE);
-       // getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        //  requestWindowFeature(Window.FEATURE_NO_TITLE);
+        // getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.main);
 
         File file = new File(dir + "/SafeCamera/");
@@ -117,14 +146,14 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                     REQUEST_CODE);
         }
 
-            mCamera = getCameraInstance();
-            CameraPreview.setCameraDisplayOrientation(this,0,mCamera);
+        mCamera = getCameraInstance();
+        CameraPreview.setCameraDisplayOrientation(this, 0, mCamera);
 
         // Mostrar ajustes
         Button settings = findViewById(R.id.settings_button);
         settings.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Log.i(TAG,"Preferencias");
+                Log.i(TAG, "Preferencias");
                 Intent activity2Intent = new Intent(getApplicationContext(), SettingsActivity.class);
                 startActivity(activity2Intent);
             }
@@ -154,14 +183,14 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             Button login = findViewById(R.id.login);
             login.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    Log.i(TAG,"Inicio de sesión");
+                    Log.i(TAG, "Inicio de sesión");
                     signIn();
                 }
             });
             Button logout = findViewById(R.id.logout);
             logout.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    Log.i(TAG,"Inicio de sesión");
+                    Log.i(TAG, "Inicio de sesión");
                     signOut();
                 }
             });
@@ -170,8 +199,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             findViewById(R.id.login).setVisibility(View.GONE);
             findViewById(R.id.logout).setVisibility(View.GONE);
         }
-
-
 
 
         // Notificación
@@ -192,15 +219,16 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         relativeLayoutControls.bringToFront();
 
 
-      Button record_button = findViewById(R.id.record_button);
+        Button record_button = findViewById(R.id.record_button);
 
         record_button.setOnTouchListener(new View.OnTouchListener() {
+            @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                         Log.i(TAG, "Botón pulsado");
-                        init_recorder(mCamera,mPreview);
+                        init_recorder(mCamera, mPreview);
 
 
                         break;
@@ -279,7 +307,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         recorder.start();
     }
 
-    void stop_recorder(Camera mCamera){
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    void stop_recorder(Camera mCamera) {
         if (recorder != null) {
             recorder.stop();
             recorder.reset();
@@ -292,10 +321,10 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         //createDriveFile();
         //saveFile();
         createVideo(filename);
+        init_encrypt(filename);
         Log.i(TAG, "Archivo guardado");
-        //keepVideo();
+        //keepVideo(filename);
     }
-
 
 
     @Override
@@ -315,8 +344,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     }
 
     @Override
-    protected void onPause()
-    {
+    protected void onPause() {
         super.onPause();
         releaseCamera();
 
@@ -360,52 +388,133 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
             case REQUEST_CODE:
                 // When request is cancelled, the results array are empty
-                if(
-                        (grantResults.length >0) &&
+                if (
+                        (grantResults.length > 0) &&
                                 (grantResults[0]
                                         + grantResults[1]
                                         + grantResults[2]
                                         == PackageManager.PERMISSION_GRANTED
                                 )
-                ){
+                ) {
                     // Permissions are granted
-                    Toast.makeText(getApplicationContext(),"Permissions granted.",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Permissions granted.", Toast.LENGTH_SHORT).show();
 
-                }else {
+                } else {
                     // Permissions are denied
-                    Toast.makeText(getApplicationContext(),"Permissions denied.",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Permissions denied.", Toast.LENGTH_SHORT).show();
                 }
                 return;
         }
     }
 
 
-
-    /** A safe way to get an instance of the Camera object. */
+    /**
+     * A safe way to get an instance of the Camera object.
+     */
     public static Camera getCameraInstance() {
 
         Camera c = null;
         try {
             c = Camera.open();
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             // Camera is not available (in use or does not exist)
         }
         return c; // returns null if camera is unavailable
     }
 
-    private void releaseCamera(){
-        if (mCamera != null){
+    private void releaseCamera() {
+        if (mCamera != null) {
             mCamera.release();        // release the camera for other applications
             mCamera = null;
         }
     }
 
+    @SuppressLint("NewApi")
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    void init_encrypt(String filename){
+        try {
+            Cipher encipher = Cipher.getInstance("AES/GCM/NoPadding");
+            // Original
+            FileInputStream fis = new FileInputStream((Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) +"/SafeCamera/" + filename));
+            //Encriptado
+            FileOutputStream fos = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/encrypted.mp4");
+
+            // Genero clave AES (ka)
+            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+            keyGen.init(256); // for example
+            SecretKey skey = keyGen.generateKey();
+
+            // Genero par de claves RSA
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance(
+                    KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore");
+
+            String alias = "SafeCamera";
+            kpg.initialize(new KeyGenParameterSpec.Builder(
+                    alias,
+                    KeyProperties.PURPOSE_SIGN | KeyProperties.PURPOSE_VERIFY)
+                    .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_OAEP)
+                    .setKeySize(2048)
+                    .build());
+
+            KeyPair keyPair = kpg.generateKeyPair();
+
+            /* Obtención de claves
+            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+            keyStore.load(null);
+            KeyStore.Entry entry = keyStore.getEntry(alias, null);
+            PrivateKey privateKey = ((KeyStore.PrivateKeyEntry) entry).getPrivateKey();
+            PublicKey publicKey = keyStore.getCertificate(alias).getPublicKey();*/
+
+
+            // Cifro la clave con RSA
+            Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, keyPair.getPublic());
+            byte[] b = cipher.doFinal(skey.getEncoded());
+            fos.write(b);
+
+            encipher.init(Cipher.ENCRYPT_MODE, skey);
+
+            processFile(encipher, fis, fos);
+
+
+
+            /*CipherOutputStream cos = new CipherOutputStream(fos, encipher);
+            //FileInputStream fis2 = new FileInputStream((Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) +"/SafeCamera/" + filename));
+
+            try (FileInputStream in = new FileInputStream(String.valueOf(fis))) {
+                processFile(encipher, in, out);
+            }
+            out.close();*/
+
+            /*
+            // Write bytes
+            int b;
+            byte[] d = new byte[8];
+            while((b = fis.read(d)) != -1) {
+                cos.write(d, 0, b);
+            }
+            // Flush and close streams.
+            cos.flush();
+            cos.close();
+
+            fis.close();*/
+
+        } catch(GeneralSecurityException e) {
+            throw new IllegalStateException("Could not retrieve AES cipher", e);
+        } catch (FileNotFoundException e){
+            throw new IllegalStateException("File not found",e);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
     // Llamar después de encriptar
-    void keepVideo() {
+    void keepVideo(String filename) {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         boolean isChecked = sharedPreferences.getBoolean("Guardar", false);
-        Toast.makeText(this, "isChecked : " + isChecked, Toast.LENGTH_LONG).show();
+        //Toast.makeText(this, "isChecked : " + isChecked, Toast.LENGTH_LONG).show();
 
         // Si es true, solo eliminamos el original y me quedo solo con el encriptado
         if (isChecked) {
@@ -415,9 +524,24 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         }
         // El original se borra en todos los casos
         File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
-        File file = new File(dir,  "/myrecording.mp4");
-        boolean deleted = file.delete();
+        File file = new File(dir,  "/SafeCamera/" + filename);
+        file.delete();
     }
+
+    static private void processFile(Cipher ci, InputStream in, OutputStream out)
+            throws javax.crypto.IllegalBlockSizeException,
+            javax.crypto.BadPaddingException,
+            java.io.IOException
+            {
+                byte[] ibuf = new byte[1024];
+                int len;
+                while ((len = in.read(ibuf)) != -1) {
+                    byte[] obuf = ci.update(ibuf, 0, len);
+                    if ( obuf != null ) out.write(obuf);
+                }
+                byte[] obuf = ci.doFinal();
+                if ( obuf != null ) out.write(obuf);
+            }
 
     // Zoom
     @Override
@@ -671,6 +795,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                             Log.e(TAG, "Couldn't create file.", exception));
         }
         Log.i(TAG, "mDriveServiceHelper es null");
+        //
     }
 
     private void saveFile() {

@@ -19,6 +19,8 @@ import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
+import com.google.api.services.drive.model.Permission;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -107,7 +109,6 @@ public class DriveServiceHelper {
             // Añado el contenido en la carpeta
             metadata.setParents(Collections.singletonList(folderID));
 
-
             File file = mDriveService.files().create(metadata, mediaContent)
                     .setFields("id")
                     .execute();
@@ -116,9 +117,7 @@ public class DriveServiceHelper {
             if (file == null) {
                 throw new IOException("Null result when requesting file creation.");
             }
-
             Log.i(TAG,"File ID: " + file.getId());
-
             return file.getId();
         });
     }
