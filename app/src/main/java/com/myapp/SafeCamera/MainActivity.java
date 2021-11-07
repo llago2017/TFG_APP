@@ -51,6 +51,7 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -58,6 +59,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
@@ -69,9 +71,15 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -80,6 +88,7 @@ import javax.crypto.Cipher;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback,
@@ -90,6 +99,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     private CameraPreview mPreview;
     MediaRecorder recorder;
     final String TAG = "MainActivity";
+    static SecureRandom srandom = new SecureRandom();
 
     float mDist;
     String filename;
@@ -438,42 +448,54 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             FileInputStream fis = new FileInputStream((Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) +"/SafeCamera/" + filename));
             //Encriptado
             FileOutputStream fos = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/encrypted.mp4");
+            FileOutputStream key_out = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/privatekey.key");
 
             // Genero clave AES (ka)
             KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-            keyGen.init(256); // for example
+            keyGen.init(128);
             SecretKey skey = keyGen.generateKey();
 
             // Genero par de claves RSA
-            KeyPairGenerator kpg = KeyPairGenerator.getInstance(
-                    KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore");
+            //KeyPairGenerator kpg = KeyPairGenerator.getInstance(
+             //       KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore");
 
             String alias = "SafeCamera";
-            kpg.initialize(new KeyGenParameterSpec.Builder(
+            /*kpg.initialize(new KeyGenParameterSpec.Builder(
                     alias,
-                    KeyProperties.PURPOSE_SIGN | KeyProperties.PURPOSE_VERIFY)
+                    KeyProperties.PURPOSE_DECRYPT)
                     .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_OAEP)
                     .setKeySize(2048)
-                    .build());
+                    .build());*/
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+            kpg.initialize(2048);
 
+            //Obtención de claves
+            //kpg.initialize(2048);
             KeyPair keyPair = kpg.generateKeyPair();
 
-            /* Obtención de claves
+            key_out.write(keyPair.getPrivate().getEncoded());
+
+            /* The key pair can also be obtained from the Android Keystore any time as follows:
             KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
             keyStore.load(null);
-            KeyStore.Entry entry = keyStore.getEntry(alias, null);
-            PrivateKey privateKey = ((KeyStore.PrivateKeyEntry) entry).getPrivateKey();
+            PrivateKey privateKey = (PrivateKey) keyStore.getKey(alias, null);
             PublicKey publicKey = keyStore.getCertificate(alias).getPublicKey();*/
 
+            // Vector de inicialización
+            byte[] iv = new byte[128/8];
+            srandom.nextBytes(iv);
+            IvParameterSpec ivspec = new IvParameterSpec(iv);
 
             // Cifro la clave con RSA
             Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
             cipher.init(Cipher.ENCRYPT_MODE, keyPair.getPublic());
             byte[] b = cipher.doFinal(skey.getEncoded());
             fos.write(b);
+            fos.write(iv);
 
-            encipher.init(Cipher.ENCRYPT_MODE, skey);
+            // Cifro con AES
+            encipher.init(Cipher.ENCRYPT_MODE, skey, ivspec);
 
             processFile(encipher, fis, fos);
 
