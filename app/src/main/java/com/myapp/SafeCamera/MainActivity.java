@@ -103,6 +103,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
     float mDist;
     String filename;
+    String enc_filename;
     File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
 
     private static final int REQUEST_CAMERA_PERMISSION = 1;
@@ -327,13 +328,10 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             mCamera.lock();
         }
 
-        //createFile();
-        //createDriveFile();
-        //saveFile();
-        createVideo(filename);
         init_encrypt(filename);
+        createVideo(enc_filename);
         Log.i(TAG, "Archivo guardado");
-        //keepVideo(filename);
+        keepVideo(filename);
     }
 
 
@@ -447,7 +445,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             // Original
             FileInputStream fis = new FileInputStream((Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) +"/SafeCamera/" + filename));
             //Encriptado
-            FileOutputStream fos = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/encrypted.mp4");
+            enc_filename = "enc_"+ filename;
+            FileOutputStream fos = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+"enc_"+ filename);
             FileOutputStream key_out = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/privatekey.key");
 
             // Genero clave AES (ka)
@@ -456,22 +455,22 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             SecretKey skey = keyGen.generateKey();
 
             // Genero par de claves RSA
-            //KeyPairGenerator kpg = KeyPairGenerator.getInstance(
-             //       KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore");
+           /* KeyPairGenerator kpg_test = KeyPairGenerator.getInstance(
+                    KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore");
 
             String alias = "SafeCamera";
-            /*kpg.initialize(new KeyGenParameterSpec.Builder(
+            kpg_test.initialize(new KeyGenParameterSpec.Builder(
                     alias,
                     KeyProperties.PURPOSE_DECRYPT)
                     .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_OAEP)
                     .setKeySize(2048)
-                    .build());*/
+                    .build());
+            kpg_test.generateKeyPair();*/
+            
+            //Obtención de claves
             KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
             kpg.initialize(2048);
-
-            //Obtención de claves
-            //kpg.initialize(2048);
             KeyPair keyPair = kpg.generateKeyPair();
 
             key_out.write(keyPair.getPrivate().getEncoded());
