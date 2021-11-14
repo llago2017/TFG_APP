@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -330,8 +331,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         init_encrypt(filename);
         createVideo(enc_filename);
-        Log.i(TAG, "Archivo guardado");
-        keepVideo(filename);
+        //new MyAsyncTask().execute();
+        //keepVideo(filename);
     }
 
 
@@ -532,19 +533,21 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     }
 
     // Llamar después de encriptar
-    void keepVideo(String filename) {
+    void keepVideo(String filename, String enc_filename) {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         boolean isChecked = sharedPreferences.getBoolean("Guardar", false);
         //Toast.makeText(this, "isChecked : " + isChecked, Toast.LENGTH_LONG).show();
+        File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
 
         // Si es true, solo eliminamos el original y me quedo solo con el encriptado
         if (isChecked) {
             // No hacemos nada, se mantiene el archivo encriptado
         } else {
             // Se borra el encriptado
+            File file = new File(dir,  "/SafeCamera/" + enc_filename);
+            file.delete();
         }
         // El original se borra en todos los casos
-        File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
         File file = new File(dir,  "/SafeCamera/" + filename);
         file.delete();
     }
@@ -788,6 +791,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                     .addOnSuccessListener(nameAndContent -> {
 
                         setReadWriteMode(fileId);
+                        keepVideo(filename, enc_filename);
                     })
                     .addOnFailureListener(exception ->
                             Log.e(TAG, "Couldn't read file.", exception));
@@ -835,6 +839,26 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
     private void setReadWriteMode(String fileId) {
         mOpenFileId = fileId;
+    }
+
+    @SuppressLint("StaticFieldLeak")
+    private class MyAsyncTask extends AsyncTask<Void, Void, Void>
+    {
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                init_encrypt(filename);
+            }
+            createVideo(enc_filename);
+            Log.i(TAG, "Archivo guardado");
+
+            return null;
+        }
+        @Override
+        protected void onPostExecute(Void result) {
+            keepVideo(filename, enc_filename);
+        }
     }
 
 
