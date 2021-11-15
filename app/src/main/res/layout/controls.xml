@@ -30,15 +30,33 @@
 
     <Button
         android:id="@+id/login"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="login" />
+        android:layout_width="39dp"
+        android:layout_height="39dp"
+        android:layout_marginLeft="10px"
+        android:layout_marginTop="10px"
+        android:background="@drawable/icon2"
+
+        android:shadowColor="#A8A8A8"
+
+        android:shadowDx="0"
+        android:shadowDy="0"
+        android:shadowRadius="5"
+        android:textColor="#FFFFFF"/>
 
     <Button
         android:id="@+id/logout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="logot" />
+        android:layout_width="39dp"
+        android:layout_height="39dp"
+        android:layout_marginLeft="10px"
+        android:layout_marginTop="10px"
+        android:background="@drawable/icon"
+
+        android:shadowColor="#A8A8A8"
+
+        android:shadowDx="0"
+        android:shadowDy="0"
+        android:shadowRadius="5"
+        android:textColor="#FFFFFF"/>
 
 
 </RelativeLayout>
