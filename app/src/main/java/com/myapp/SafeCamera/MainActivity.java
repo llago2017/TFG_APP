@@ -4,9 +4,11 @@ package com.myapp.SafeCamera;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
@@ -14,6 +16,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.BaseColumns;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.security.keystore.KeyProtection;
@@ -476,6 +479,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
             key_out.write(keyPair.getPrivate().getEncoded());
 
+            storeDb();
             /* The key pair can also be obtained from the Android Keystore any time as follows:
             KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
             keyStore.load(null);
@@ -821,6 +825,23 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         }
         Log.i(TAG, "mDriveServiceHelper es null");
         //
+    }
+
+    private void storeDb(){
+        FeedReaderDbHelper dbHelper = new FeedReaderDbHelper(getApplicationContext());
+
+        // Gets the data repository in write mode
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+        // Create a new map of values, where column names are the keys
+        ContentValues values = new ContentValues();
+        values.put(DatabaseSetting.FeedEntry.COLUMN_NAME_TITLE, "title");
+        values.put(DatabaseSetting.FeedEntry.COLUMN_NAME_SUBTITLE, "subtitle");
+        values.put(String.valueOf(DatabaseSetting.FeedEntry.MY_KEY), Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/privatekey.key");
+
+        // Insert the new row, returning the primary key value of the new row
+        long newRowId = db.insert(DatabaseSetting.FeedEntry.TABLE_NAME, null, values);
+
     }
 
     private void saveFile() {
