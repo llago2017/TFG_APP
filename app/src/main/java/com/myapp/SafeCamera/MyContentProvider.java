@@ -16,6 +16,8 @@ import java.io.File;
 import java.util.HashMap;
 
 public class MyContentProvider extends ContentProvider {
+
+
     public MyContentProvider() {
     }
 
@@ -30,6 +32,7 @@ public class MyContentProvider extends ContentProvider {
 
     static final String id = "id";
     static final String name = "name";
+    static final String mykey = "mykey";
     static final int uriCode = 1;
     static final UriMatcher uriMatcher;
     private static HashMap<String, String> values;
@@ -147,9 +150,11 @@ public class MyContentProvider extends ContentProvider {
 
     // sql query to create the table
 
+
     static final String CREATE_DB_TABLE = " CREATE TABLE " + TABLE_NAME
             + " (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-            + " name TEXT NOT NULL);";
+            + " name TEXT NOT NULL,"
+            + " mykey TEXT NOT NULL);";
 
 
     // creating a database

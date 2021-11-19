@@ -819,8 +819,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         if (!checkDb) {
             // Create a new map of values, where column names are the keys
             ContentValues values = new ContentValues();
-            values.put(MyContentProvider.name,"MyPrivateKey");
-            //values.put(String.valueOf(MyContentProvider.MY_KEY), MY_PRIVATEKEY);
+            values.put(MyContentProvider.name,MY_PRIVATEKEY);
+            values.put(MyContentProvider.mykey, MY_PRIVATEKEY);
 
             getContentResolver().insert(MyContentProvider.CONTENT_URI, values);
 
@@ -844,7 +844,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 //your code
                 //s = cursor.getString(x);
                 Log.i("Resultado", ""+cursor.getString(0));
-                if (cursor.getString(0).equals("MyPrivateKey")) {
+                if (!cursor.getString(0).equals("")) {
                     Log.i(TAG, "Ya existe una clave");
                     checkDb = true;
                 }
