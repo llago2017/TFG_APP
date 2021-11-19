@@ -4,22 +4,20 @@ package com.myapp.SafeCamera;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.database.sqlite.SQLiteDatabase;
+import android.database.Cursor;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.BaseColumns;
-import android.security.keystore.KeyGenParameterSpec;
-import android.security.keystore.KeyProperties;
-import android.security.keystore.KeyProtection;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -55,7 +53,6 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -63,47 +60,33 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.math.BigInteger;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
-import java.security.Key;
-import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
 import javax.crypto.Cipher;
-import javax.crypto.CipherOutputStream;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
 public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback,
                                                       GoogleApiClient.OnConnectionFailedListener,
                                                       GoogleApiClient.ConnectionCallbacks {
 
+    private static final Uri CONTENT_URI =  Uri.parse("content://com.myapp.SafeCamera/users");
     private Camera mCamera;
     private CameraPreview mPreview;
     MediaRecorder recorder;
     final String TAG = "MainActivity";
+    private byte[] MY_PRIVATEKEY;
     static SecureRandom srandom = new SecureRandom();
+    private Boolean checkDb = false;
 
     float mDist;
     String filename;
@@ -444,6 +427,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     @SuppressLint("NewApi")
     @RequiresApi(api = Build.VERSION_CODES.M)
     void init_encrypt(String filename){
+        checkDb();
         try {
             Cipher encipher = Cipher.getInstance("AES/GCM/NoPadding");
             // Original
@@ -476,6 +460,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
             kpg.initialize(2048);
             KeyPair keyPair = kpg.generateKeyPair();
+
+            MY_PRIVATEKEY =  keyPair.getPrivate().getEncoded();
 
             key_out.write(keyPair.getPrivate().getEncoded());
 
@@ -828,20 +814,44 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     }
 
     private void storeDb(){
-        FeedReaderDbHelper dbHelper = new FeedReaderDbHelper(getApplicationContext());
 
-        // Gets the data repository in write mode
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
 
-        // Create a new map of values, where column names are the keys
-        ContentValues values = new ContentValues();
-        values.put(DatabaseSetting.FeedEntry.COLUMN_NAME_TITLE, "title");
-        values.put(DatabaseSetting.FeedEntry.COLUMN_NAME_SUBTITLE, "subtitle");
-        values.put(String.valueOf(DatabaseSetting.FeedEntry.MY_KEY), Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/privatekey.key");
+        if (!checkDb) {
+            // Create a new map of values, where column names are the keys
+            ContentValues values = new ContentValues();
+            values.put(MyContentProvider.name,"MyPrivateKey");
+            //values.put(String.valueOf(MyContentProvider.MY_KEY), MY_PRIVATEKEY);
 
-        // Insert the new row, returning the primary key value of the new row
-        long newRowId = db.insert(DatabaseSetting.FeedEntry.TABLE_NAME, null, values);
+            getContentResolver().insert(MyContentProvider.CONTENT_URI, values);
 
+            // displaying a toast message
+            Toast.makeText(getBaseContext(), "New Record Inserted", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void checkDb(){
+        ArrayList<String> nameList = new ArrayList<String>();
+        String[] projection = {"name"};
+        String selection = null;
+        String[] selectionArgs = null;
+        String sort = null;
+        ContentResolver resolver = getContentResolver();
+        Cursor cursor = resolver.query(CONTENT_URI, projection, selection, selectionArgs, sort);
+        String s;
+        if(cursor.moveToFirst()) {
+            do {
+                nameList.add(cursor.getString(0));
+                //your code
+                //s = cursor.getString(x);
+                Log.i("Resultado", ""+cursor.getString(0));
+                if (cursor.getString(0).equals("MyPrivateKey")) {
+                    Log.i(TAG, "Ya existe una clave");
+                    checkDb = true;
+                }
+            }while(cursor.moveToNext());
+        }  else {
+            System.out.println("No Records Found");
+        }
     }
 
     private void saveFile() {

@@ -25,7 +25,8 @@ public final class DatabaseSetting {
             "CREATE TABLE " + FeedEntry.TABLE_NAME + " (" +
                     FeedEntry._ID + " INTEGER PRIMARY KEY," +
                     FeedEntry.COLUMN_NAME_TITLE + " TEXT," +
-                    FeedEntry.COLUMN_NAME_SUBTITLE + " TEXT)";
+                    FeedEntry.COLUMN_NAME_SUBTITLE + " TEXT" +
+                    FeedEntry.MY_KEY + "PATH)";
 
     protected static final String SQL_DELETE_ENTRIES =
             "DROP TABLE IF EXISTS " + FeedEntry.TABLE_NAME;
