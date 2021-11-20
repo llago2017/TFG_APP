@@ -61,9 +61,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -85,6 +92,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     MediaRecorder recorder;
     final String TAG = "MainActivity";
     private byte[] MY_PRIVATEKEY;
+    private byte[] MY_PUBLICKEY;
     static SecureRandom srandom = new SecureRandom();
     private Boolean checkDb = false;
 
@@ -437,33 +445,29 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             FileOutputStream fos = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+"enc_"+ filename);
             FileOutputStream key_out = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/privatekey.key");
 
-            // Genero clave AES (ka)
-            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-            keyGen.init(128);
-            SecretKey skey = keyGen.generateKey();
+            PublicKey pub = null;
+            if (!checkDb) {
+                // Se genera una clave
+                //Obtención de claves
+                KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+                kpg.initialize(2048);
+                KeyPair keyPair = kpg.generateKeyPair();
+                key_out.write(keyPair.getPrivate().getEncoded());
+                pub = keyPair.getPublic();
 
-            // Genero par de claves RSA
-           /* KeyPairGenerator kpg_test = KeyPairGenerator.getInstance(
-                    KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore");
-
-            String alias = "SafeCamera";
-            kpg_test.initialize(new KeyGenParameterSpec.Builder(
-                    alias,
-                    KeyProperties.PURPOSE_DECRYPT)
-                    .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
-                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_OAEP)
-                    .setKeySize(2048)
-                    .build());
-            kpg_test.generateKeyPair();*/
-            
-            //Obtención de claves
-            KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-            kpg.initialize(2048);
-            KeyPair keyPair = kpg.generateKeyPair();
-
-            MY_PRIVATEKEY =  keyPair.getPrivate().getEncoded();
-
-            key_out.write(keyPair.getPrivate().getEncoded());
+                MY_PRIVATEKEY =  keyPair.getPrivate().getEncoded();
+                MY_PUBLICKEY = keyPair.getPublic().getEncoded();
+            } else {
+                // La obtengo de la base de datos
+                byte[] test = searchPK();
+                X509EncodedKeySpec ks = new X509EncodedKeySpec(test);
+                try {
+                    KeyFactory kf = KeyFactory.getInstance("RSA");
+                    pub = kf.generatePublic(ks);
+                } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+                    e.printStackTrace();
+                }
+            }
 
             storeDb();
             /* The key pair can also be obtained from the Android Keystore any time as follows:
@@ -472,6 +476,11 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             PrivateKey privateKey = (PrivateKey) keyStore.getKey(alias, null);
             PublicKey publicKey = keyStore.getCertificate(alias).getPublicKey();*/
 
+            // Genero clave AES (ka)
+            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+            keyGen.init(128);
+            SecretKey skey = keyGen.generateKey();
+
             // Vector de inicialización
             byte[] iv = new byte[128/8];
             srandom.nextBytes(iv);
@@ -479,7 +488,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
             // Cifro la clave con RSA
             Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, keyPair.getPublic());
+            cipher.init(Cipher.ENCRYPT_MODE, pub);
             byte[] b = cipher.doFinal(skey.getEncoded());
             fos.write(b);
             fos.write(iv);
@@ -813,13 +822,39 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         //
     }
 
-    private void storeDb(){
+    private byte[] searchPK(){
+        ArrayList<String> nameList = new ArrayList<String>();
+        String[] projection = {"name"};
+        String selection = null;
+        String[] selectionArgs = null;
+        String sort = null;
+        ContentResolver resolver = getContentResolver();
+        Cursor cursor = resolver.query(CONTENT_URI, projection, selection, selectionArgs, sort);
+        Log.i("TUTORIAL", "counts :"+cursor.getCount());
+        String s;
+        byte[] test = new byte[0];
+        if(cursor.moveToFirst()) {
+            do {
+                //nameList.add(cursor.getString(0));
+                //your code
+                //s = cursor.getString(x);
 
+                Log.i("Resultado", "key");
+                test = cursor.getBlob(0);
+
+            }while(cursor.moveToNext());
+        }  else {
+            System.out.println("No Records Found");
+        }
+        return test;
+    }
+
+    private void storeDb(){
 
         if (!checkDb) {
             // Create a new map of values, where column names are the keys
             ContentValues values = new ContentValues();
-            values.put(MyContentProvider.name,MY_PRIVATEKEY);
+            values.put(MyContentProvider.name,MY_PUBLICKEY);
             values.put(MyContentProvider.mykey, MY_PRIVATEKEY);
 
             getContentResolver().insert(MyContentProvider.CONTENT_URI, values);
@@ -837,14 +872,12 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         String sort = null;
         ContentResolver resolver = getContentResolver();
         Cursor cursor = resolver.query(CONTENT_URI, projection, selection, selectionArgs, sort);
-        String s;
+        Log.i(TAG, "counts :"+cursor.getCount());
         if(cursor.moveToFirst()) {
             do {
-                nameList.add(cursor.getString(0));
                 //your code
                 //s = cursor.getString(x);
-                Log.i("Resultado", ""+cursor.getString(0));
-                if (!cursor.getString(0).equals("")) {
+                if (cursor.getCount() > 0) {
                     Log.i(TAG, "Ya existe una clave");
                     checkDb = true;
                 }
