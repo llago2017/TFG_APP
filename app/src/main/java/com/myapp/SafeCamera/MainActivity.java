@@ -73,6 +73,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -80,7 +81,10 @@ import java.util.List;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.PBEParameterSpec;
 
 public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback,
                                                       GoogleApiClient.OnConnectionFailedListener,
@@ -437,23 +441,25 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     void init_encrypt(String filename){
         checkDb();
         try {
-            Cipher encipher = Cipher.getInstance("AES/GCM/NoPadding");
+
             // Original
             FileInputStream fis = new FileInputStream((Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) +"/SafeCamera/" + filename));
             //Encriptado
             enc_filename = "enc_"+ filename;
             FileOutputStream fos = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+"enc_"+ filename);
-            FileOutputStream key_out = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/privatekey.key");
+
 
             PublicKey pub = null;
+            byte[] priv = null;
             if (!checkDb) {
                 // Se genera una clave
                 //Obtención de claves
                 KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
                 kpg.initialize(2048);
                 KeyPair keyPair = kpg.generateKeyPair();
-                key_out.write(keyPair.getPrivate().getEncoded());
+                //key_out.write(keyPair.getPrivate().getEncoded());
                 pub = keyPair.getPublic();
+                priv = keyPair.getPrivate().getEncoded();
 
                 MY_PRIVATEKEY =  keyPair.getPrivate().getEncoded();
                 MY_PUBLICKEY = keyPair.getPublic().getEncoded();
@@ -470,11 +476,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             }
 
             storeDb();
-            /* The key pair can also be obtained from the Android Keystore any time as follows:
-            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
-            keyStore.load(null);
-            PrivateKey privateKey = (PrivateKey) keyStore.getKey(alias, null);
-            PublicKey publicKey = keyStore.getCertificate(alias).getPublicKey();*/
 
             // Genero clave AES (ka)
             KeyGenerator keyGen = KeyGenerator.getInstance("AES");
@@ -494,32 +495,42 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             fos.write(iv);
 
             // Cifro con AES
+            Cipher encipher = Cipher.getInstance("AES/GCM/NoPadding");
             encipher.init(Cipher.ENCRYPT_MODE, skey, ivspec);
-
             processFile(encipher, fis, fos);
 
+            //
+            if (priv != null) {
+                Log.i(TAG, "Se ha creado una clave privada");
+                FileOutputStream key_out = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/SafeCamera.key");
+                String password = "12345678";
 
+                int count = 20;// hash iteration count
+                byte[] salt = {
+                        (byte)0xc7, (byte)0x73, (byte)0x21, (byte)0x8c,
+                        (byte)0x7e, (byte)0xc8, (byte)0xee, (byte)0x99
+                };
 
-            /*CipherOutputStream cos = new CipherOutputStream(fos, encipher);
-            //FileInputStream fis2 = new FileInputStream((Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) +"/SafeCamera/" + filename));
+                Log.i(TAG, "Pass: " + Arrays.toString(password.toCharArray()));
+                // Create PBE parameter set
+                PBEParameterSpec pbeParamSpec = new PBEParameterSpec(salt, count);
+                PBEKeySpec pbeKeySpec = new PBEKeySpec(password.toCharArray());//,salt, count, 128);
+                SecretKeyFactory keyFac = SecretKeyFactory.getInstance("PBEWithSHAAnd3KeyTripleDES");
+                SecretKey pbeKey = keyFac.generateSecret(pbeKeySpec);
 
-            try (FileInputStream in = new FileInputStream(String.valueOf(fis))) {
-                processFile(encipher, in, out);
+                Cipher pbeCipher = Cipher.getInstance("PBEWithSHAAnd3KeyTripleDES");
+
+                // Initialize PBE Cipher with key and parameters
+                pbeCipher.init(Cipher.ENCRYPT_MODE, pbeKey, pbeParamSpec);
+
+                // Encrypt the encoded Private Key with the PBE key
+                byte[] ciphertext = pbeCipher.doFinal(priv);
+                key_out.write(ciphertext);
+
             }
-            out.close();*/
 
-            /*
-            // Write bytes
-            int b;
-            byte[] d = new byte[8];
-            while((b = fis.read(d)) != -1) {
-                cos.write(d, 0, b);
-            }
-            // Flush and close streams.
-            cos.flush();
-            cos.close();
 
-            fis.close();*/
+
 
         } catch(GeneralSecurityException e) {
             throw new IllegalStateException("Could not retrieve AES cipher", e);
