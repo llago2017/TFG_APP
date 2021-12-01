@@ -154,10 +154,20 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                             Manifest.permission.WRITE_EXTERNAL_STORAGE
                     },
                     REQUEST_CODE);
+            CameraPreview.surfaceCreated();
         }
 
-        mCamera = getCameraInstance();
-        CameraPreview.setCameraDisplayOrientation(this, 0, mCamera);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            mCamera = getCameraInstance();
+            CameraPreview.setCameraDisplayOrientation(this, 0, mCamera);
+
+            // Create our Preview view and set it as the content of our activity.
+            mPreview = new CameraPreview(this, mCamera);
+            FrameLayout frameLayout = findViewById(R.id.camera_preview);
+            frameLayout.addView(mPreview);
+        }
+
+
 
         // Mostrar ajustes
         Button settings = findViewById(R.id.settings_button);
@@ -219,10 +229,10 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         record_toast.setDuration(Toast.LENGTH_SHORT);
         record_toast.setView(layout);
 
-        // Create our Preview view and set it as the content of our activity.
+       /* // Create our Preview view and set it as the content of our activity.
         mPreview = new CameraPreview(this, mCamera);
         FrameLayout frameLayout = findViewById(R.id.camera_preview);
-        frameLayout.addView(mPreview);
+        frameLayout.addView(mPreview);*/
 
 
         RelativeLayout relativeLayoutControls = (RelativeLayout) findViewById(R.id.controls_layout);
@@ -353,7 +363,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     @Override
     protected void onPause() {
         super.onPause();
-        releaseCamera();
+        //releaseCamera();
 
     }
 
