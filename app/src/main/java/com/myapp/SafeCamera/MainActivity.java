@@ -338,7 +338,13 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         }
 
         init_encrypt(filename);
-        createVideo(enc_filename);
+        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
+        if (account != null) {
+            createVideo(enc_filename);
+        } else {
+            keepVideo(filename, enc_filename);
+        }
+
         //new MyAsyncTask().execute();
         //keepVideo(filename);
     }
