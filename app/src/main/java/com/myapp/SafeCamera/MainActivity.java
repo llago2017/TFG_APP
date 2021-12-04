@@ -95,7 +95,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     private CameraPreview mPreview;
     MediaRecorder recorder;
     final String TAG = "MainActivity";
-    private byte[] MY_PRIVATEKEY;
     private byte[] MY_PUBLICKEY;
     static SecureRandom srandom = new SecureRandom();
     private Boolean checkDb = false;
@@ -477,7 +476,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 pub = keyPair.getPublic();
                 priv = keyPair.getPrivate().getEncoded();
 
-                MY_PRIVATEKEY =  keyPair.getPrivate().getEncoded();
                 MY_PUBLICKEY = keyPair.getPublic().getEncoded();
             } else {
                 // La obtengo de la base de datos
@@ -882,7 +880,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             // Create a new map of values, where column names are the keys
             ContentValues values = new ContentValues();
             values.put(MyContentProvider.name,MY_PUBLICKEY);
-            values.put(MyContentProvider.mykey, MY_PRIVATEKEY);
 
             getContentResolver().insert(MyContentProvider.CONTENT_URI, values);
 

@@ -153,8 +153,7 @@ public class MyContentProvider extends ContentProvider {
 
     static final String CREATE_DB_TABLE = " CREATE TABLE " + TABLE_NAME
             + " (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-            + " name TEXT NOT NULL,"
-            + " mykey TEXT NOT NULL);";
+            + " name TEXT NOT NULL);";
 
 
     // creating a database
