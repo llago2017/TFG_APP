@@ -5,6 +5,7 @@
 
     <SwitchPreferenceCompat
         android:layout_width="match_parent"
+        android:defaultValue="true"
         app:key="Guardar"
         app:summaryOff="@string/save_summary_off"
         app:summaryOn="@string/save_summary_on"
