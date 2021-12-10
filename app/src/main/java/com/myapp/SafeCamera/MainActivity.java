@@ -1,6 +1,8 @@
 package com.myapp.SafeCamera;
 
 
+import static java.net.Proxy.Type.HTTP;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -53,13 +55,30 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.mime.HttpMultipartMode;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.util.EntityUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -91,10 +110,11 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                                                       GoogleApiClient.ConnectionCallbacks {
 
     private static final Uri CONTENT_URI =  Uri.parse("content://com.myapp.SafeCamera/users");
+    private static String TAG = "MainActivity";
     private Camera mCamera;
     private CameraPreview mPreview;
     MediaRecorder recorder;
-    final String TAG = "MainActivity";
+    //final String TAG = "MainActivity";
     private byte[] MY_PUBLICKEY;
     static SecureRandom srandom = new SecureRandom();
     private Boolean checkDb = false;
@@ -118,6 +138,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
 
     private GoogleApiClient mGoogleApiClient;
+    boolean anon = false;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -197,7 +218,9 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         boolean Drive = sharedPreferences.getBoolean("Drive", false);
+        anon = sharedPreferences.getBoolean("anon", false);
         Toast.makeText(this, "Drive : " + Drive, Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "AnonFiles : " + anon, Toast.LENGTH_LONG).show();
         if (Drive) {
             Button login = findViewById(R.id.login);
             login.setOnClickListener(new View.OnClickListener() {
@@ -342,6 +365,17 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             createVideo(enc_filename);
         } else {
             keepVideo(filename, enc_filename);
+        }
+
+        if (anon){
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
+                    request_test(enc_filename);
+
+                }
+            });
+
         }
 
         //new MyAsyncTask().execute();
@@ -950,6 +984,79 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     }
 
 
+    static void request_test(String enc_filename) {
+        try {
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpPost httpost = new HttpPost("https://api.anonfiles.com/upload");
 
+            File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+ enc_filename);
+
+            // Adding data
+            FileBody fileBody = new FileBody(file);
+            MultipartEntityBuilder builder = MultipartEntityBuilder.create()
+                    .setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
+                    .addPart("file", fileBody);
+            HttpEntity multiPartEntity = builder.build();
+            httpost.setEntity(multiPartEntity);
+
+            HttpResponse response = httpclient.execute(httpost);
+
+            if (response.getStatusLine().getStatusCode() == 200) {
+                String json = EntityUtils.toString(response.getEntity(), "UTF-8");
+                Log.i(TAG, "respuesta: " + json);
+                JSONObject obj = new JSONObject(json);
+                saveAnon(obj);
+                String status = obj.getString("status");
+                Log.i(TAG, "Estado: " + status);
+            } else {
+                String json = EntityUtils.toString(response.getEntity(), "UTF-8");
+                Log.i(TAG, "respuesta: " + json);
+                JSONObject obj = new JSONObject(json);
+                String status = obj.getString("status");
+                Log.i(TAG, "Estado: " + status);
+
+            }
+        } catch (ClientProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void saveAnon(JSONObject obj) {
+        //String json = "{\"status\":true,\"data\":{\"file\":{\"url\":{\"full\":\"https://anonfiles.com/p06dR0p1va/img_jpg\",\"short\":\"https://anonfiles.com/p06dR0p1va\"},\"metadata\":{\"id\":\"p06dR0p1va\",\"name\":\"img.jpg\",\"size\":{\"bytes\":2192881,\"readable\":\"2.19MB\"}}}}}";
+
+        try {
+            String status = obj.getString("status");
+            String data = obj.getString("data");
+            JSONObject newobj = new JSONObject(data);
+            String file = newobj.getString("file");
+            JSONObject newobj2 = new JSONObject(file);
+            String url = new JSONObject(newobj2.getString("url")).getString("full");
+            String filename = new JSONObject(newobj2.getString("metadata")).getString("name");
+
+            File doc = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+ "SafeCamera-AnonFiles.txt");
+            if(doc.exists()) {
+                //Do something
+                FileWriter fw = new FileWriter(doc.getAbsolutePath(),true); //the true will append the new data
+                fw.write(filename + ": " + url + "\n");//appends the string to the file
+                fw.close();
+            } else {
+                // Do something else.
+                FileOutputStream fos = new FileOutputStream(doc);
+                fos.write((filename + ": " + url + "\n").getBytes());
+                fos.flush();
+                fos.close();
+            }
+            System.out.println(status);
+            System.out.println(url);
+        } catch(org.json.JSONException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 }

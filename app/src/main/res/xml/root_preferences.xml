@@ -19,11 +19,15 @@
         android:key="Drive"
         android:title="Google Drive"
         android:disableDependentsState="false" />
-        <Preference
+       <!-- <Preference
             android:title="Inicio de sesión"
             android:key="@string/loginbutton"
             android:summary="@string/login_summary"
-            android:dependency="Drive" />
+            android:dependency="Drive" /> -->
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="anon"
+        android:title="AnonFiles"/>
     </PreferenceCategory>
 
 

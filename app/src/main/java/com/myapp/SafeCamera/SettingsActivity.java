@@ -121,7 +121,7 @@ public class SettingsActivity extends AppCompatActivity {
             setPreferencesFromResource(R.xml.root_preferences, rootKey);
 
             Preference button = findPreference(getString(R.string.loginbutton));
-            button.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+/*            button.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
                 @Override
                 public boolean onPreferenceClick(Preference preference) {
                     Log.i(TAG, "Inicio de sesión");
@@ -134,7 +134,7 @@ public class SettingsActivity extends AppCompatActivity {
                 }
 
 
-            });
+            });*/
 
 
 
