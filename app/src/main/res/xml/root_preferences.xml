@@ -28,6 +28,11 @@
         android:defaultValue="false"
         android:key="anon"
         android:title="AnonFiles"/>
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="fileio"
+        android:title="File.io"
+        android:summary="@string/fileio_summary"/>
     </PreferenceCategory>
 
 

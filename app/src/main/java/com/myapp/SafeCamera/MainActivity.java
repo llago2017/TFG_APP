@@ -139,6 +139,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
     private GoogleApiClient mGoogleApiClient;
     boolean anon = false;
+    boolean fileio = false;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -219,6 +220,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         boolean Drive = sharedPreferences.getBoolean("Drive", false);
         anon = sharedPreferences.getBoolean("anon", false);
+        fileio = sharedPreferences.getBoolean("fileio", false);
         Toast.makeText(this, "Drive : " + Drive, Toast.LENGTH_LONG).show();
         Toast.makeText(this, "AnonFiles : " + anon, Toast.LENGTH_LONG).show();
         if (Drive) {
@@ -371,7 +373,33 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             AsyncTask.execute(new Runnable() {
                 @Override
                 public void run() {
-                    request_test(enc_filename);
+                    request_test(enc_filename, "anon");
+
+                }
+            });
+
+        }
+
+        if (fileio) {
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
+                    // Get file from file name
+                    File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+ enc_filename);
+                    // Get length of file in bytes
+                    long fileSizeInBytes = file.length();
+                    // Convert the bytes to Kilobytes (1 KB = 1024 Bytes)
+                    long fileSizeInKB = fileSizeInBytes / 1024;
+                    // Convert the KB to MegaBytes (1 MB = 1024 KBytes)
+                    long fileSizeInMB = fileSizeInKB / 1024;
+
+                    if (fileSizeInMB >= 100) {
+                        Log.i(TAG, "Tamaño mayor de 100MB, no se puede subir");
+                        showMessage("Tamaño mayor de 100MB, no se puede subir");
+                    } else {
+                        Log.i(TAG, "Menor de 100MB: " + fileSizeInMB);
+                        request_test(enc_filename, "fileio");
+                    }
 
                 }
             });
@@ -984,10 +1012,20 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     }
 
 
-    static void request_test(String enc_filename) {
+    static void request_test(String enc_filename, String to) {
         try {
             HttpClient httpclient = new DefaultHttpClient();
-            HttpPost httpost = new HttpPost("https://api.anonfiles.com/upload");
+            HttpPost httpost = null;
+            switch (to) {
+                case "anon":
+                    httpost = new HttpPost("https://api.anonfiles.com/upload");
+                    Log.i(TAG, "Subiendo a AnonFiles");
+                    break;
+                case "fileio":
+                    httpost = new HttpPost("https://file.io");
+                    Log.i(TAG, "Subiendo a File.io");
+                    break;
+            }
 
             File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+ enc_filename);
 
@@ -1005,7 +1043,15 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 String json = EntityUtils.toString(response.getEntity(), "UTF-8");
                 Log.i(TAG, "respuesta: " + json);
                 JSONObject obj = new JSONObject(json);
-                saveAnon(obj);
+
+                switch (to) {
+                    case "anon":
+                        saveAnon(obj);
+                        break;
+                    case "fileio":
+                        json_fileio(obj);
+                        break;
+                }
                 String status = obj.getString("status");
                 Log.i(TAG, "Estado: " + status);
             } else {
@@ -1037,6 +1083,33 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             String url = new JSONObject(newobj2.getString("url")).getString("full");
             String filename = new JSONObject(newobj2.getString("metadata")).getString("name");
 
+            totxt(filename, url);
+            System.out.println(status);
+            System.out.println(url);
+        } catch(org.json.JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    static void json_fileio(JSONObject obj) {
+        //String json = "{\"success\":true,\"status\":200,\"id\":\"279e3360-5b85-11ec-b896-9b143cda26df\",\"key\":\"uNLkv4LYk5ed\",\"name\":\"img.jpg\",\"link\":\"https://file.io/uNLkv4LYk5ed\",\"private\":false,\"expires\":\"2021-12-26T19:53:19.510Z\",\"downloads\":0,\"maxDownloads\":1,\"autoDelete\":true,\"size\":2192881,\"mimeType\":\"application/octet-stream\",\"created\":\"2021-12-12T19:53:19.510Z\",\"modified\":\"2021-12-12T19:53:19.510Z\"}";
+
+        try {
+            //JSONObject obj = new JSONObject(json);
+            String status = obj.getString("status");
+            String filename = obj.getString("name");
+            String url = obj.getString("link");
+
+            totxt(filename, url);
+            System.out.println(status);
+        } catch(org.json.JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void totxt(String filename, String url) {
+        try{
             File doc = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+ "SafeCamera-AnonFiles.txt");
             if(doc.exists()) {
                 //Do something
@@ -1050,10 +1123,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 fos.flush();
                 fos.close();
             }
-            System.out.println(status);
+            //System.out.println(status);
             System.out.println(url);
-        } catch(org.json.JSONException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
