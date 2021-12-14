@@ -20,6 +20,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -326,21 +327,9 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMddHHmm");
         filename = dateFormat.format(new Date()) + "_SafeCamera.mp4";
-        recorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/SafeCamera/" + filename);
-
-        // TEST GET ENABLE/DISABLE SAVE
-       /* SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean isChecked = sharedPreferences.getBoolean("Guardar", false);
-        Toast.makeText(this, "isChecked : " + isChecked, Toast.LENGTH_LONG).show();
-
-        if (isChecked) {
-            recorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/myrecording.mp4");
-        } else {
-            recorder.setOutputFile("/dev/null");
-        } */
+        recorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/SafeCamera/" + "." + filename);
 
 
-        // Step 5: Prepare configured MediaRecorder
         try {
             recorder.prepare();
         } catch (IllegalStateException e) {
@@ -520,7 +509,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         try {
 
             // Original
-            FileInputStream fis = new FileInputStream((Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) +"/SafeCamera/" + filename));
+            FileInputStream fis = new FileInputStream((Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) +"/SafeCamera/" +"." +  filename));
             //Encriptado
             enc_filename = "enc_"+ filename;
             FileOutputStream fos = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+"enc_"+ filename);
@@ -634,7 +623,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             file.delete();
         }
         // El original se borra en todos los casos
-        File file = new File(dir,  "/SafeCamera/" + filename);
+        File file = new File(dir,  "/SafeCamera/" + "." + filename);
         file.delete();
     }
 
