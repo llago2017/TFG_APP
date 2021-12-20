@@ -1,8 +1,5 @@
 package com.myapp.SafeCamera;
 
-
-import static java.net.Proxy.Type.HTTP;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -20,7 +17,6 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.ParcelFileDescriptor;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -47,7 +43,6 @@ import com.google.android.gms.common.Scopes;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Scope;
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
@@ -58,7 +53,6 @@ import com.google.api.services.drive.DriveScopes;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
@@ -69,7 +63,6 @@ import org.apache.http.util.EntityUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -77,22 +70,17 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -111,7 +99,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                                                       GoogleApiClient.ConnectionCallbacks {
 
     private static final Uri CONTENT_URI =  Uri.parse("content://com.myapp.SafeCamera/users");
-    private static String TAG = "MainActivity";
+    private final static String TAG = "MainActivity";
     private Camera mCamera;
     private CameraPreview mPreview;
     MediaRecorder recorder;
@@ -125,9 +113,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     String enc_filename;
     File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
 
-    private static final int REQUEST_CAMERA_PERMISSION = 1;
-    private static final int REQUEST_MICRO_PERMISSION = 2;
-    private static final int REQUEST_WRITE_PERMISSION = 3;
     private static final int REQUEST_CODE = 1001;
     private static final int RC_SIGN_IN = 9001;
 
@@ -138,19 +123,15 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     private String mOpenFileId;
 
 
-    private GoogleApiClient mGoogleApiClient;
     boolean anon = false;
     boolean fileio = false;
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
-        // Hide the window title.
-        //  requestWindowFeature(Window.FEATURE_NO_TITLE);
-        // getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.main);
 
         File file = new File(dir + "/SafeCamera/");
@@ -165,9 +146,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 + ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 + ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
-            //requestCameraPermission();
-            //requestMicroPermission();
-            //requestWritePermission();
+
             ActivityCompat.requestPermissions(
                     this,
                     new String[]{
@@ -193,12 +172,10 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         // Mostrar ajustes
         Button settings = findViewById(R.id.settings_button);
-        settings.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                Log.i(TAG, "Preferencias");
-                Intent activity2Intent = new Intent(getApplicationContext(), SettingsActivity.class);
-                startActivity(activity2Intent);
-            }
+        settings.setOnClickListener(v -> {
+            Log.i(TAG, "Preferencias");
+            Intent activity2Intent = new Intent(getApplicationContext(), SettingsActivity.class);
+            startActivity(activity2Intent);
         });
 
         // Inicio de sesión de drive
@@ -226,18 +203,14 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         Toast.makeText(this, "AnonFiles : " + anon, Toast.LENGTH_LONG).show();
         if (Drive) {
             Button login = findViewById(R.id.login);
-            login.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    Log.i(TAG, "Inicio de sesión");
-                    signIn();
-                }
+            login.setOnClickListener(v -> {
+                Log.i(TAG, "Inicio de sesión");
+                signIn();
             });
             Button logout = findViewById(R.id.logout);
-            logout.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    Log.i(TAG, "Inicio de sesión");
-                    signOut();
-                }
+            logout.setOnClickListener(v -> {
+                Log.i(TAG, "Inicio de sesión");
+                signOut();
             });
         } else {
 
@@ -254,11 +227,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         record_toast.setDuration(Toast.LENGTH_SHORT);
         record_toast.setView(layout);
 
-       /* // Create our Preview view and set it as the content of our activity.
-        mPreview = new CameraPreview(this, mCamera);
-        FrameLayout frameLayout = findViewById(R.id.camera_preview);
-        frameLayout.addView(mPreview);*/
-
 
         RelativeLayout relativeLayoutControls = (RelativeLayout) findViewById(R.id.controls_layout);
         relativeLayoutControls.bringToFront();
@@ -266,32 +234,28 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         Button record_button = findViewById(R.id.record_button);
 
-        record_button.setOnTouchListener(new View.OnTouchListener() {
-            @RequiresApi(api = Build.VERSION_CODES.M)
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        Log.i(TAG, "Botón pulsado");
-                        init_recorder(mCamera, mPreview);
+        record_button.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    Log.i(TAG, "Botón pulsado");
+                    init_recorder(mCamera, mPreview);
 
 
-                        break;
-                    case MotionEvent.ACTION_UP:
-                        // RELEASED
-                        Log.i(TAG, "Botón soltado");
-                        // Paro de grabar
-                        stop_recorder(mCamera);
+                    break;
+                case MotionEvent.ACTION_UP:
+                    // RELEASED
+                    Log.i(TAG, "Botón soltado");
+                    // Paro de grabar
+                    stop_recorder(mCamera);
 
-                        // Preparación del encriptado
-                        //init_encrypt();
+                    // Preparación del encriptado
+                    //init_encrypt();
 
-                        record_toast.show();
-                        break;
-                }
-
-                return false;
+                    record_toast.show();
+                    break;
             }
+
+            return false;
         });
     }
 
@@ -359,44 +323,32 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         }
 
         if (anon){
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    request_test(enc_filename, "anon");
-
-                }
-            });
+            AsyncTask.execute(() -> request_test(enc_filename, "anon"));
 
         }
 
         if (fileio) {
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    // Get file from file name
-                    File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+ enc_filename);
-                    // Get length of file in bytes
-                    long fileSizeInBytes = file.length();
-                    // Convert the bytes to Kilobytes (1 KB = 1024 Bytes)
-                    long fileSizeInKB = fileSizeInBytes / 1024;
-                    // Convert the KB to MegaBytes (1 MB = 1024 KBytes)
-                    long fileSizeInMB = fileSizeInKB / 1024;
+            AsyncTask.execute(() -> {
+                // Get file from file name
+                File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+ enc_filename);
+                // Get length of file in bytes
+                long fileSizeInBytes = file.length();
+                // Convert the bytes to Kilobytes (1 KB = 1024 Bytes)
+                long fileSizeInKB = fileSizeInBytes / 1024;
+                // Convert the KB to MegaBytes (1 MB = 1024 KBytes)
+                long fileSizeInMB = fileSizeInKB / 1024;
 
-                    if (fileSizeInMB >= 100) {
-                        Log.i(TAG, "Tamaño mayor de 100MB, no se puede subir");
-                        showMessage("Tamaño mayor de 100MB, no se puede subir");
-                    } else {
-                        Log.i(TAG, "Menor de 100MB: " + fileSizeInMB);
-                        request_test(enc_filename, "fileio");
-                    }
-
+                if (fileSizeInMB >= 100) {
+                    Log.i(TAG, "Tamaño mayor de 100MB, no se puede subir");
+                    showMessage("Tamaño mayor de 100MB, no se puede subir");
+                } else {
+                    Log.i(TAG, "Menor de 100MB: " + fileSizeInMB);
+                    request_test(enc_filename, "fileio");
                 }
+
             });
 
         }
-
-        //new MyAsyncTask().execute();
-        //keepVideo(filename);
     }
 
 
@@ -425,58 +377,23 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
-                                           String[] permissions, int[] grantResults) {
-        switch (requestCode) {
-            case REQUEST_CAMERA_PERMISSION: {
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                } else {
-                    Toast.makeText(this, "Permissions Denied show camera", Toast.LENGTH_LONG).show();
-                }
-                return;
-            }
-            case REQUEST_MICRO_PERMISSION: {
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // permission was granted
-                } else {
-                    // permission denied
-                    // functionality that depends on this permission.
-                    Toast.makeText(this, "Permissions Denied to record audio", Toast.LENGTH_LONG).show();
-                }
-                return;
-            }
+                                           @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode == REQUEST_CODE) {// When request is cancelled, the results array are empty
+            if (
+                    (grantResults.length > 0) &&
+                            (grantResults[0]
+                                    + grantResults[1]
+                                    + grantResults[2]
+                                    == PackageManager.PERMISSION_GRANTED
+                            )
+            ) {
+                // Permissions are granted
+                Toast.makeText(getApplicationContext(), "Permissions granted.", Toast.LENGTH_SHORT).show();
 
-            case REQUEST_WRITE_PERMISSION: {
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // permission was granted
-                } else {
-                    // permission denied
-                    // functionality that depends on this permission.
-                    Toast.makeText(this, "Permissions Denied to write storage", Toast.LENGTH_LONG).show();
-                }
-                return;
+            } else {
+                // Permissions are denied
+                Toast.makeText(getApplicationContext(), "Permissions denied.", Toast.LENGTH_SHORT).show();
             }
-
-            case REQUEST_CODE:
-                // When request is cancelled, the results array are empty
-                if (
-                        (grantResults.length > 0) &&
-                                (grantResults[0]
-                                        + grantResults[1]
-                                        + grantResults[2]
-                                        == PackageManager.PERMISSION_GRANTED
-                                )
-                ) {
-                    // Permissions are granted
-                    Toast.makeText(getApplicationContext(), "Permissions granted.", Toast.LENGTH_SHORT).show();
-
-                } else {
-                    // Permissions are denied
-                    Toast.makeText(getApplicationContext(), "Permissions denied.", Toast.LENGTH_SHORT).show();
-                }
-                return;
         }
     }
 
@@ -615,13 +532,12 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
 
         // Si es true, solo eliminamos el original y me quedo solo con el encriptado
-        if (isChecked) {
-            // No hacemos nada, se mantiene el archivo encriptado
-        } else {
+        if (!isChecked) {
             // Se borra el encriptado
             File file = new File(dir,  "/SafeCamera/" + enc_filename);
             file.delete();
         }
+
         // El original se borra en todos los casos
         File file = new File(dir,  "/SafeCamera/" + "." + filename);
         file.delete();
@@ -686,19 +602,11 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     }
 
     public void handleFocus(MotionEvent event, Camera.Parameters params) {
-        int pointerId = event.getPointerId(0);
-        int pointerIndex = event.findPointerIndex(pointerId);
-        // Get the pointer's current position
-        float x = event.getX(pointerIndex);
-        float y = event.getY(pointerIndex);
 
         List<String> supportedFocusModes = params.getSupportedFocusModes();
         if (supportedFocusModes != null && supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
-            mCamera.autoFocus(new Camera.AutoFocusCallback() {
-                @Override
-                public void onAutoFocus(boolean b, Camera camera) {
-                    // currently set to auto-focus on single touch
-                }
+            mCamera.autoFocus((b, camera) -> {
+                // auto enfoca un toque
             });
         }
     }
@@ -742,6 +650,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
     // [START handleSignInResult]
     private void handleSignInResult(@Nullable Task<GoogleSignInAccount> completedTask) {
+        assert completedTask != null;
         Log.d(TAG, "handleSignInResult:" + completedTask.isSuccessful());
 
         try {
@@ -787,30 +696,14 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
     // [START signOut]
     private void signOut() {
-        mGoogleSignInClient.signOut().addOnCompleteListener(this, new OnCompleteListener<Void>() {
-            @Override
-            public void onComplete(@NonNull Task<Void> task) {
-                // [START_EXCLUDE]
-                updateUI(null);
-                // [END_EXCLUDE]
-            }
+        mGoogleSignInClient.signOut().addOnCompleteListener(this, task -> {
+            // [START_EXCLUDE]
+            updateUI(null);
+            // [END_EXCLUDE]
         });
     }
     // [END signOut]
 
-    // [START revokeAccess]
-    private void revokeAccess() {
-        mGoogleSignInClient.revokeAccess().addOnCompleteListener(this,
-                new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        // [START_EXCLUDE]
-                        updateUI(null);
-                        // [END_EXCLUDE]
-                    }
-                });
-    }
-    // [END revokeAccess]
     private void updateUI(@Nullable GoogleSignInAccount account) {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         boolean Drive = sharedPreferences.getBoolean("Drive", false);
@@ -834,30 +727,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
-  /*  @SuppressLint("StringFormatInvalid")
-    private void createDriveFile() {
-        // Get currently signed in account (or null)
-        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
 
-        // Synchronously check for necessary permissions
-        if (!GoogleSignIn.hasPermissions(account, Drive.SCOPE_FILE)) {
-            // Note: this launches a sign-in flow, however the code to detect
-            // the result of the sign-in flow and retry the API call is not
-            // shown here.
-            GoogleSignIn.requestPermissions(this, RC_SIGN_IN,
-                    account, Drive.SCOPE_FILE);
-            return;
-        }
-
-        DriveResourceClient client = Drive.getDriveResourceClient(this, account);
-        client.createContents()
-                .addOnCompleteListener(task ->
-                        Log.i(TAG,"Parece que fiunciona"));
-    }*/
-
-    /**
-     * Retrieves the title and content of a file identified by {@code fileId} and populates the UI.
-     */
     private void readFile(String fileId) {
         if (mDriveServiceHelper != null) {
             Log.i(TAG, "Reading file " + fileId);
@@ -871,18 +741,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                     .addOnFailureListener(exception ->
                             Log.e(TAG, "Couldn't read file.", exception));
         }
-    }
-
-    private void createFile() {
-        if (mDriveServiceHelper != null) {
-            Log.i(TAG, "Creating a file.");
-
-            mDriveServiceHelper.createFile()
-                    .addOnSuccessListener(fileId -> readFile(fileId))
-                    .addOnFailureListener(exception ->
-                            Log.e(TAG, "Couldn't create file.", exception));
-        }
-        Log.i(TAG, "mDriveServiceHelper es null");
     }
 
     private void createVideo(String filename) {
@@ -899,22 +757,15 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     }
 
     private byte[] searchPK(){
-        ArrayList<String> nameList = new ArrayList<String>();
         String[] projection = {"name"};
         String selection = null;
         String[] selectionArgs = null;
         String sort = null;
         ContentResolver resolver = getContentResolver();
         Cursor cursor = resolver.query(CONTENT_URI, projection, selection, selectionArgs, sort);
-        Log.i("TUTORIAL", "counts :"+cursor.getCount());
-        String s;
         byte[] test = new byte[0];
         if(cursor.moveToFirst()) {
             do {
-                //nameList.add(cursor.getString(0));
-                //your code
-                //s = cursor.getString(x);
-
                 Log.i("Resultado", "key");
                 test = cursor.getBlob(0);
 
@@ -940,18 +791,14 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     }
 
     private void checkDb(){
-        ArrayList<String> nameList = new ArrayList<String>();
         String[] projection = {"name"};
         String selection = null;
         String[] selectionArgs = null;
         String sort = null;
         ContentResolver resolver = getContentResolver();
         Cursor cursor = resolver.query(CONTENT_URI, projection, selection, selectionArgs, sort);
-        Log.i(TAG, "counts :"+cursor.getCount());
         if(cursor.moveToFirst()) {
             do {
-                //your code
-                //s = cursor.getString(x);
                 if (cursor.getCount() > 0) {
                     Log.i(TAG, "Ya existe una clave");
                     checkDb = true;
@@ -962,44 +809,9 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         }
     }
 
-    private void saveFile() {
-        if (mDriveServiceHelper != null && mOpenFileId != null) {
-            Log.i(TAG, "Saving " + mOpenFileId);
-
-            String fileName = "prueba";
-            String fileContent = "Hola mundo";
-
-            mDriveServiceHelper.saveFile(mOpenFileId, fileName, fileContent)
-                    .addOnFailureListener(exception ->
-                            Log.e(TAG, "Unable to save file via REST.", exception));
-        }
-    }
-
-
     private void setReadWriteMode(String fileId) {
         mOpenFileId = fileId;
     }
-
-    @SuppressLint("StaticFieldLeak")
-    private class MyAsyncTask extends AsyncTask<Void, Void, Void>
-    {
-
-        @Override
-        protected Void doInBackground(Void... params) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                init_encrypt(filename);
-            }
-            createVideo(enc_filename);
-            Log.i(TAG, "Archivo guardado");
-
-            return null;
-        }
-        @Override
-        protected void onPostExecute(Void result) {
-            keepVideo(filename, enc_filename);
-        }
-    }
-
 
     static void request_test(String enc_filename, String to) {
         try {
@@ -1024,7 +836,9 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                     .setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
                     .addPart("file", fileBody);
             HttpEntity multiPartEntity = builder.build();
-            httpost.setEntity(multiPartEntity);
+            if (httpost != null) {
+                httpost.setEntity(multiPartEntity);
+            }
 
             HttpResponse response = httpclient.execute(httpost);
 
@@ -1051,11 +865,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 Log.i(TAG, "Estado: " + status);
 
             }
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
+        } catch (IOException | JSONException e) {
             e.printStackTrace();
         }
     }
