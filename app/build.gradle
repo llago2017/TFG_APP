@@ -49,6 +49,7 @@ dependencies {
     implementation files('libs/httpmime-4.3.6.jar')
     testImplementation 'junit:junit:4.13.2'
 
+    implementation 'com.google.android.gms:play-services-location:17.0.0'
     // g drive libs
     implementation 'com.google.android.gms:play-services-auth:19.2.0'
     implementation 'com.google.http-client:google-http-client-gson:1.26.0'

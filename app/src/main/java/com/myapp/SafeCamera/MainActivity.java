@@ -3,20 +3,30 @@ package com.myapp.SafeCamera;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.hardware.Camera;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.media.CamcorderProfile;
+import android.media.ExifInterface;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -43,13 +53,16 @@ import com.google.android.gms.common.Scopes;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Scope;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.Task;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
-
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -95,11 +108,13 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.PBEParameterSpec;
 
 public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback,
-                                                      GoogleApiClient.OnConnectionFailedListener,
-                                                      GoogleApiClient.ConnectionCallbacks {
+        GoogleApiClient.OnConnectionFailedListener,
+        GoogleApiClient.ConnectionCallbacks {
 
-    private static final Uri CONTENT_URI =  Uri.parse("content://com.myapp.SafeCamera/users");
+    private static final Uri CONTENT_URI = Uri.parse("content://com.myapp.SafeCamera/users");
     private final static String TAG = "MainActivity";
+    private static final float LOCATION_REFRESH_DISTANCE = 1000;
+    private static final long LOCATION_REFRESH_TIME = 1000;
     private Camera mCamera;
     private CameraPreview mPreview;
     MediaRecorder recorder;
@@ -126,14 +141,24 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     boolean anon = false;
     boolean fileio = false;
 
+    // Localización
+    double longitude;
+    double latitude;
+    LocationManager locationManager;
+
     @RequiresApi(api = Build.VERSION_CODES.M)
-    @SuppressLint("ClickableViewAccessibility")
+    @SuppressLint({"ClickableViewAccessibility", "MissingPermission"})
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.main);
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1002);
+        } else {
+            getCurrentLocation();
+        }
         File file = new File(dir + "/SafeCamera/");
 
         if (!file.isDirectory()) {
@@ -146,7 +171,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 + ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 + ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
-
+            
             ActivityCompat.requestPermissions(
                     this,
                     new String[]{
@@ -227,7 +252,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         record_toast.setDuration(Toast.LENGTH_SHORT);
         record_toast.setView(layout);
 
-
+       
         RelativeLayout relativeLayoutControls = (RelativeLayout) findViewById(R.id.controls_layout);
         relativeLayoutControls.bringToFront();
 
@@ -259,6 +284,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         });
     }
 
+
     void init_recorder(Camera mCamera, CameraPreview mPreview) {
         // BEGIN_INCLUDE (configure_media_recorder)
         recorder = new MediaRecorder();
@@ -281,6 +307,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
         CamcorderProfile cpHigh = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
         recorder.setProfile(cpHigh);
+        recorder.setLocation(Float.parseFloat(String.valueOf(latitude)),Float.parseFloat(String.valueOf(longitude)));
 
         // Set 5: Output file
         // SwitchPreference preference change listener
@@ -318,6 +345,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
         if (account != null) {
             createVideo(enc_filename);
+
         } else {
             keepVideo(filename, enc_filename);
         }
@@ -393,6 +421,13 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             } else {
                 // Permissions are denied
                 Toast.makeText(getApplicationContext(), "Permissions denied.", Toast.LENGTH_SHORT).show();
+            }
+        }
+        if(requestCode == 1002 && grantResults.length > 0) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                getCurrentLocation();
+            } else {
+                showMessage("Permission denied!");
             }
         }
     }
@@ -537,7 +572,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             File file = new File(dir,  "/SafeCamera/" + enc_filename);
             file.delete();
         }
-
+        
         // El original se borra en todos los casos
         File file = new File(dir,  "/SafeCamera/" + "." + filename);
         file.delete();
@@ -703,7 +738,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         });
     }
     // [END signOut]
-
+    
     private void updateUI(@Nullable GoogleSignInAccount account) {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         boolean Drive = sharedPreferences.getBoolean("Drive", false);
@@ -727,7 +762,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
-
+  
     private void readFile(String fileId) {
         if (mDriveServiceHelper != null) {
             Log.i(TAG, "Reading file " + fileId);
@@ -742,7 +777,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                             Log.e(TAG, "Couldn't read file.", exception));
         }
     }
-
+    
     private void createVideo(String filename) {
         if (mDriveServiceHelper != null) {
             Log.i(TAG, "Creating a video.");
@@ -928,5 +963,33 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             e.printStackTrace();
         }
     }
+
+    @SuppressLint("MissingPermission")
+    void getCurrentLocation() {
+
+        LocationRequest locationRequest = new LocationRequest();
+        locationRequest.setInterval(10000);
+        locationRequest.setFastestInterval(3000);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        LocationServices.getFusedLocationProviderClient(MainActivity.this)
+                .requestLocationUpdates(locationRequest, new LocationCallback() {
+
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                super.onLocationResult(locationResult);
+                LocationServices.getFusedLocationProviderClient(MainActivity.this).removeLocationUpdates(this);
+
+                if(locationResult != null && locationResult.getLocations().size() > 0){
+                    int lastestLocatioIndex = locationResult.getLocations().size() - 1;
+                    latitude = locationResult.getLocations().get(lastestLocatioIndex).getLatitude();
+                    longitude = locationResult.getLocations().get(lastestLocatioIndex).getLongitude();
+                    showMessage(String.valueOf(latitude));
+                }
+
+            }
+        }, Looper.getMainLooper());
+    }
+
 
 }
