@@ -764,6 +764,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
                         setReadWriteMode(fileId);
                         keepVideo(filename, enc_filename);
+                        signOut();
                     })
                     .addOnFailureListener(exception ->
                             Log.e(TAG, "Couldn't read file.", exception));
