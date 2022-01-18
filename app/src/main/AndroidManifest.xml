@@ -45,6 +45,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <meta-data
+            android:name="com.google.android.apps.APP_ID"
+            android:value="AIzaSyABM1DEi-I1J3Q-aPFT-N5C0W_xh_YVDe0" />
     </application>
 
 </manifest>
