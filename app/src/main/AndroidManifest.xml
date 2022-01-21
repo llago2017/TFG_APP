@@ -29,7 +29,7 @@
             android:name=".MyContentProvider"
             android:authorities="com.myapp.SafeCamera"
             android:enabled="true"
-            android:exported="true"></provider>
+            android:exported="false" />
 
         <activity
             android:name=".SettingsActivity"
