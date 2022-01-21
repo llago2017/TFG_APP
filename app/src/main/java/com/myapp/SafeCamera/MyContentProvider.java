@@ -94,7 +94,7 @@ public class MyContentProvider extends ContentProvider {
     // adding data to the database
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        long rowID = db.insert(TABLE_NAME, "", values);
+        long rowID = db.insert(TABLE_NAME, null, values);
         if (rowID > 0) {
             Uri _uri = ContentUris.withAppendedId(CONTENT_URI, rowID);
             getContext().getContentResolver().notifyChange(_uri, null);
