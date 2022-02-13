@@ -538,7 +538,12 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
             }
 
-
+            // Añadir en la galería
+            Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+            File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+enc_filename);
+            Uri contentUri = Uri.fromFile(f);
+            mediaScanIntent.setData(contentUri);
+            this.sendBroadcast(mediaScanIntent);
 
 
         } catch(GeneralSecurityException e) {
@@ -937,7 +942,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
     static void totxt(String filename, String url) {
         try{
-            File doc = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+ "SafeCamera-AnonFiles.txt");
+            File doc = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+ "/SafeCamera/"+ "SafeCamera.txt");
             if(doc.exists()) {
                 //Do something
                 FileWriter fw = new FileWriter(doc.getAbsolutePath(),true); //the true will append the new data
