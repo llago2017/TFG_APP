@@ -79,6 +79,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -93,8 +95,11 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
@@ -140,6 +145,9 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
     double longitude;
     double latitude;
     LocationManager locationManager;
+
+    //Claves
+    byte[] priv = null;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint({"ClickableViewAccessibility", "MissingPermission"})
@@ -464,7 +472,6 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
 
 
             PublicKey pub = null;
-            byte[] priv = null;
             if (!checkDb) {
                 // Se genera una clave
                 //Obtención de claves
@@ -519,32 +526,6 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                 DialogoPass dialogoPass = new DialogoPass();
                 dialogoPass.show(getSupportFragmentManager(), "pass");
 
-
-                FileOutputStream key_out = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/SafeCamera.key");
-                String password = "12345678";
-
-                int count = 20;// hash iteration count
-                byte[] salt = {
-                        (byte)0xc7, (byte)0x73, (byte)0x21, (byte)0x8c,
-                        (byte)0x7e, (byte)0xc8, (byte)0xee, (byte)0x99
-                };
-
-                Log.i(TAG, "Pass: " + Arrays.toString(password.toCharArray()));
-                // Create PBE parameter set
-                PBEParameterSpec pbeParamSpec = new PBEParameterSpec(salt, count);
-                PBEKeySpec pbeKeySpec = new PBEKeySpec(password.toCharArray());//,salt, count, 128);
-                SecretKeyFactory keyFac = SecretKeyFactory.getInstance("PBEWithSHAAnd3KeyTripleDES");
-                SecretKey pbeKey = keyFac.generateSecret(pbeKeySpec);
-
-                Cipher pbeCipher = Cipher.getInstance("PBEWithSHAAnd3KeyTripleDES");
-
-                // Initialize PBE Cipher with key and parameters
-                pbeCipher.init(Cipher.ENCRYPT_MODE, pbeKey, pbeParamSpec);
-
-                // Encrypt the encoded Private Key with the PBE key
-                byte[] ciphertext = pbeCipher.doFinal(priv);
-                key_out.write(ciphertext);
-
             }
 
             // Añadir en la galería
@@ -568,6 +549,57 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
     @Override
     public void onFinishEditDialog(String inputText) {
         Toast.makeText(this, "Hi, " + inputText, Toast.LENGTH_SHORT).show();
+
+        try {
+            FileOutputStream key_out = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/SafeCamera.key");
+            String password = inputText;
+
+            int count = 20;// hash iteration count
+            byte[] salt = {
+                    (byte)0xc7, (byte)0x73, (byte)0x21, (byte)0x8c,
+                    (byte)0x7e, (byte)0xc8, (byte)0xee, (byte)0x99
+            };
+
+            Log.i(TAG, "Pass: " + Arrays.toString(password.toCharArray()));
+            // Create PBE parameter set
+            PBEParameterSpec pbeParamSpec = new PBEParameterSpec(salt, count);
+            PBEKeySpec pbeKeySpec = new PBEKeySpec(password.toCharArray());//,salt, count, 128);
+            SecretKeyFactory keyFac = SecretKeyFactory.getInstance("PBEWithSHAAnd3KeyTripleDES");
+            SecretKey pbeKey = keyFac.generateSecret(pbeKeySpec);
+
+            Cipher pbeCipher = Cipher.getInstance("PBEWithSHAAnd3KeyTripleDES");
+
+            // Initialize PBE Cipher with key and parameters
+            pbeCipher.init(Cipher.ENCRYPT_MODE, pbeKey, pbeParamSpec);
+
+            // Encrypt the encoded Private Key with the PBE key
+            byte[] ciphertext = pbeCipher.doFinal(priv);
+            key_out.write(ciphertext);
+
+            // After use, remove password
+            inputText = null;
+            password = null;
+        } catch (InvalidAlgorithmParameterException e) {
+            e.printStackTrace();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        }
+
+
     }
 
     // Llamar después de encriptar
