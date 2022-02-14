@@ -34,6 +34,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentActivity;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
@@ -99,9 +101,10 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.PBEParameterSpec;
 
-public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback,
+public class MainActivity extends FragmentActivity implements ActivityCompat.OnRequestPermissionsResultCallback,
         GoogleApiClient.OnConnectionFailedListener,
-        GoogleApiClient.ConnectionCallbacks {
+        GoogleApiClient.ConnectionCallbacks,
+        DialogoPass.EditNameDialogListener {
 
     private static final Uri CONTENT_URI = Uri.parse("content://com.myapp.SafeCamera/users");
     private final static String TAG = "MainActivity";
@@ -398,6 +401,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_CODE) {// When request is cancelled, the results array are empty
             if (
                     (grantResults.length > 0) &&
@@ -415,7 +419,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 Toast.makeText(getApplicationContext(), "Permissions denied.", Toast.LENGTH_SHORT).show();
             }
         }
-        if(requestCode == 1002 && grantResults.length > 0) {
+        if (requestCode == 1002 && grantResults.length > 0) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 getCurrentLocation();
             } else {
@@ -509,8 +513,13 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             processFile(encipher, fis, fos);
 
             //
+
             if (priv != null) {
                 Log.i(TAG, "Se ha creado una clave privada");
+                DialogoPass dialogoPass = new DialogoPass();
+                dialogoPass.show(getSupportFragmentManager(), "pass");
+
+
                 FileOutputStream key_out = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/SafeCamera.key");
                 String password = "12345678";
 
@@ -554,6 +563,11 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
             e.printStackTrace();
         }
 
+    }
+
+    @Override
+    public void onFinishEditDialog(String inputText) {
+        Toast.makeText(this, "Hi, " + inputText, Toast.LENGTH_SHORT).show();
     }
 
     // Llamar después de encriptar

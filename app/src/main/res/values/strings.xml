@@ -23,4 +23,7 @@
     <string name="file_created">Se ha creado</string>
     <string name="file_create_error">Error</string>
     <string name="fileio_summary">Preferentemente de corta duración. El video se subirá si su tamaño es menor de 100MB.</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="dialog_request">Se ha detectado que no había ninguna clave almacenada, por favor intrduzca una contraseña.</string>
 </resources>
