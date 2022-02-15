@@ -554,11 +554,17 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
             FileOutputStream key_out = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/SafeCamera.key");
             String password = inputText;
 
-            int count = 20;// hash iteration count
-            byte[] salt = {
+            /*byte[] salt = {
                     (byte)0xc7, (byte)0x73, (byte)0x21, (byte)0x8c,
                     (byte)0x7e, (byte)0xc8, (byte)0xee, (byte)0x99
-            };
+            };*/
+
+            int count = 20;// hash iteration count
+
+            byte[] salt = new byte[8];
+            srandom.nextBytes(salt);
+            Log.i(TAG, "SALT: " + Arrays.toString(salt));
+            key_out.write(salt);
 
             Log.i(TAG, "Pass: " + Arrays.toString(password.toCharArray()));
             // Create PBE parameter set
