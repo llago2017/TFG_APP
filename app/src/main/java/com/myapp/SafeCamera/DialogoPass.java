@@ -27,33 +27,41 @@ public class DialogoPass extends DialogFragment implements TextView.OnEditorActi
 
     private EditNameDialogListener listener;
     private EditText userInput;
+    private Button accept;
 
     public interface EditNameDialogListener {
         void onFinishEditDialog(String inputText);
     }
 
+    @NonNull
         @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
+        public AlertDialog onCreateDialog(Bundle savedInstanceState) {
             AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
             // Get the layout inflater
             LayoutInflater inflater = requireActivity().getLayoutInflater();
             View v = inflater.inflate(R.layout.fragment_dialog, null);
 
+            AlertDialog dialog = builder.create();
+            dialog.setCanceledOnTouchOutside(false);
             // Inflate and set the layout for the dialog
             // Pass null as the parent view because its going in the dialog layout
-            builder.setView(v);
+            dialog.setView(v);
+            dialog.setCancelable(false);
 
             userInput = v.findViewById(R.id.password);
+            accept = v.findViewById(R.id.accept);
 
-            builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int id) {
+            accept.setOnClickListener(a -> {
+                if (userInput.getText().toString().length() >= 3) {
                     Log.i("DIALOGO", "test -> " + userInput.getText().toString());
                     listener.onFinishEditDialog(userInput.getText().toString());
                     dismiss();
+                } else {
+                    Toast.makeText(getActivity().getApplicationContext(), "La contraseña debe tener al menos 3 carácteres", Toast.LENGTH_LONG).show();
                 }
             });
-            return builder.create();
+
+            return dialog;
         }
 
     @Override
