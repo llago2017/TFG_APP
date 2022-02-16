@@ -154,7 +154,7 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        PreferenceManager.setDefaultValues(this, R.xml.root_preferences, false);
         setContentView(R.layout.main);
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -195,7 +195,6 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
             FrameLayout frameLayout = findViewById(R.id.camera_preview);
             frameLayout.addView(mPreview);
         }
-
 
 
         // Mostrar ajustes
@@ -781,9 +780,9 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
     // [START signOut]
     private void signOut() {
         mGoogleSignInClient.signOut().addOnCompleteListener(this, task -> {
-            // [START_EXCLUDE]
+            mGoogleSignInClient.revokeAccess();
+
             updateUI(null);
-            // [END_EXCLUDE]
         });
     }
     // [END signOut]
