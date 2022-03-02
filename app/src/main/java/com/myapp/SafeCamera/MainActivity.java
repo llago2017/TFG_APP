@@ -127,7 +127,6 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
     private Camera mCamera;
     private CameraPreview mPreview;
     MediaRecorder recorder;
-    //final String TAG = "MainActivity";
     private byte[] MY_PUBLICKEY;
     static SecureRandom srandom = new SecureRandom();
     private Boolean checkDb = false;
@@ -137,16 +136,23 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
     String enc_filename;
     File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
 
+    // Constantes
     private static final int REQUEST_CODE = 1001;
     private static final int RC_SIGN_IN = 9001;
+    private static final int BYTES = 1024;
+    private static final int MAX_MB = 100;
+    private static final int RSAKEY_SIZE = 2048;
+    private static final int AESKEY_SIZE = 128;
+    private static final int IV_BLOCK = 128/8;
+    private static final int IT_COUNT = 500;
+    private static final int SALT_BYTE = 8;
 
     // Drive
     private DriveServiceHelper mDriveServiceHelper;
-
     private GoogleSignInClient mGoogleSignInClient;
     private String mOpenFileId;
 
-
+    // Nube
     boolean anon = false;
     boolean fileio = false;
     boolean block = false;
@@ -154,13 +160,10 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
     // Localización
     double longitude;
     double latitude;
-    LocationManager locationManager;
 
     //Claves
     byte[] priv = null;
     private String signedMail;
-    private ArrayList<String> emails;
-    private String authToken;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint({"ClickableViewAccessibility", "MissingPermission"})
@@ -170,11 +173,11 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
         PreferenceManager.setDefaultValues(this, R.xml.root_preferences, false);
         setContentView(R.layout.main);
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        /*if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1002);
         } else {
             getCurrentLocation();
-        }
+        }*/
         File file = new File(dir + "/SafeCamera/");
 
         if (!file.isDirectory()) {
@@ -186,7 +189,17 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 + ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 + ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                + ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
+
+            ComponentName cn = new ComponentName(this, AdminReceiver.class);
+            DevicePolicyManager mgr = (DevicePolicyManager)getSystemService(DEVICE_POLICY_SERVICE);
+            if (!mgr.isAdminActive(cn)) {
+                Log.e(TAG, "User is NOT an admin!");
+                Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+                intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, cn);
+                startActivityForResult(intent, REQUEST_ENABLE);
+            }
             
             ActivityCompat.requestPermissions(
                     this,
@@ -194,12 +207,13 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                             Manifest.permission.CAMERA,
                             Manifest.permission.RECORD_AUDIO,
                             Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                            Manifest.permission.GET_ACCOUNTS
+                            Manifest.permission.GET_ACCOUNTS,
+                            Manifest.permission.ACCESS_FINE_LOCATION
                     },
                     REQUEST_CODE);
             CameraPreview.surfaceCreated();
         }
-
+        getCurrentLocation();
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             mCamera = getCameraInstance();
             CameraPreview.setCameraDisplayOrientation(this, 0, mCamera);
@@ -210,6 +224,9 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
             frameLayout.addView(mPreview);
         }
 
+        // [Start Admin]
+        // Administrador para bloquear el dispositivo
+        //[End Admin]
 
         // Mostrar ajustes
         Button settings = findViewById(R.id.settings_button);
@@ -380,11 +397,11 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                 // Get length of file in bytes
                 long fileSizeInBytes = file.length();
                 // Convert the bytes to Kilobytes (1 KB = 1024 Bytes)
-                long fileSizeInKB = fileSizeInBytes / 1024;
+                long fileSizeInKB = fileSizeInBytes / BYTES;
                 // Convert the KB to MegaBytes (1 MB = 1024 KBytes)
-                long fileSizeInMB = fileSizeInKB / 1024;
+                long fileSizeInMB = fileSizeInKB / BYTES;
 
-                if (fileSizeInMB >= 100) {
+                if (fileSizeInMB >= MAX_MB) {
                     Log.i(TAG, "Tamaño mayor de 100MB, no se puede subir");
                     showMessage("Tamaño mayor de 100MB, no se puede subir");
                 } else {
@@ -431,6 +448,8 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                             (grantResults[0]
                                     + grantResults[1]
                                     + grantResults[2]
+                                    + grantResults[3]
+                                    + grantResults[4]
                                     == PackageManager.PERMISSION_GRANTED
                             )
             ) {
@@ -440,13 +459,6 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
             } else {
                 // Permissions are denied
                 Toast.makeText(getApplicationContext(), "Permissions denied.", Toast.LENGTH_SHORT).show();
-            }
-        }
-        if (requestCode == 1002 && grantResults.length > 0) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                getCurrentLocation();
-            } else {
-                showMessage("Permission denied!");
             }
         }
     }
@@ -491,7 +503,7 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                 // Se genera una clave
                 //Obtención de claves
                 KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-                kpg.initialize(2048);
+                kpg.initialize(RSAKEY_SIZE);
                 KeyPair keyPair = kpg.generateKeyPair();
                 //key_out.write(keyPair.getPrivate().getEncoded());
                 pub = keyPair.getPublic();
@@ -514,11 +526,11 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
 
             // Genero clave AES (ka)
             KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-            keyGen.init(128);
+            keyGen.init(AESKEY_SIZE);
             SecretKey skey = keyGen.generateKey();
 
             // Vector de inicialización
-            byte[] iv = new byte[128/8];
+            byte[] iv = new byte[IV_BLOCK];
             srandom.nextBytes(iv);
             IvParameterSpec ivspec = new IvParameterSpec(iv);
 
@@ -563,7 +575,7 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
 
     @Override
     public void onFinishEditDialog(String inputText) {
-        Toast.makeText(this, "Hi, " + inputText, Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "Hi, " + inputText, Toast.LENGTH_SHORT).show();
 
         try {
             FileOutputStream key_out = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/SafeCamera.key");
@@ -574,16 +586,14 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                     (byte)0x7e, (byte)0xc8, (byte)0xee, (byte)0x99
             };*/
 
-            int count = 20;// hash iteration count
-
-            byte[] salt = new byte[8];
+            byte[] salt = new byte[SALT_BYTE];
             srandom.nextBytes(salt);
             Log.i(TAG, "SALT: " + Arrays.toString(salt));
             key_out.write(salt);
 
             Log.i(TAG, "Pass: " + Arrays.toString(password.toCharArray()));
             // Create PBE parameter set
-            PBEParameterSpec pbeParamSpec = new PBEParameterSpec(salt, count);
+            PBEParameterSpec pbeParamSpec = new PBEParameterSpec(salt, IT_COUNT);
             PBEKeySpec pbeKeySpec = new PBEKeySpec(password.toCharArray());//,salt, count, 128);
             SecretKeyFactory keyFac = SecretKeyFactory.getInstance("PBEWithSHAAnd3KeyTripleDES");
             SecretKey pbeKey = keyFac.generateSecret(pbeKeySpec);
@@ -782,7 +792,7 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                         .build();
         mDriveServiceHelper = new DriveServiceHelper(googleDriveService);
         signedMail = account.getEmail();
-        authToken = account.getIdToken();
+        //authToken = account.getIdToken();
         showMessage("Signed in as " + signedMail);
     }
 
@@ -1093,7 +1103,6 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
             Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
             intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, cn);
             startActivityForResult(intent, REQUEST_ENABLE);
-
         }
     }
 
