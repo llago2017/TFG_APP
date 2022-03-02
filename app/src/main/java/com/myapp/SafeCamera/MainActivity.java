@@ -1,10 +1,17 @@
 package com.myapp.SafeCamera;
 
 import android.Manifest;
+import android.accounts.Account;
+import android.accounts.AccountManager;
+import android.accounts.AccountManagerCallback;
+import android.accounts.AccountManagerFuture;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -20,6 +27,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Looper;
 import android.util.Log;
+import android.util.Patterns;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -90,10 +98,12 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -113,8 +123,7 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
 
     private static final Uri CONTENT_URI = Uri.parse("content://com.myapp.SafeCamera/users");
     private final static String TAG = "MainActivity";
-    private static final float LOCATION_REFRESH_DISTANCE = 1000;
-    private static final long LOCATION_REFRESH_TIME = 1000;
+    private static final int REQUEST_ENABLE = 0;
     private Camera mCamera;
     private CameraPreview mPreview;
     MediaRecorder recorder;
@@ -140,6 +149,7 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
 
     boolean anon = false;
     boolean fileio = false;
+    boolean block = false;
 
     // Localización
     double longitude;
@@ -148,6 +158,9 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
 
     //Claves
     byte[] priv = null;
+    private String signedMail;
+    private ArrayList<String> emails;
+    private String authToken;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint({"ClickableViewAccessibility", "MissingPermission"})
@@ -180,7 +193,8 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                     new String[]{
                             Manifest.permission.CAMERA,
                             Manifest.permission.RECORD_AUDIO,
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            Manifest.permission.GET_ACCOUNTS
                     },
                     REQUEST_CODE);
             CameraPreview.surfaceCreated();
@@ -226,8 +240,10 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
         boolean Drive = sharedPreferences.getBoolean("Drive", false);
         anon = sharedPreferences.getBoolean("anon", false);
         fileio = sharedPreferences.getBoolean("fileio", false);
-        Toast.makeText(this, "Drive : " + Drive, Toast.LENGTH_LONG).show();
-        Toast.makeText(this, "AnonFiles : " + anon, Toast.LENGTH_LONG).show();
+        block = sharedPreferences.getBoolean("block", false);
+        showMessage("bloquear: " + block);
+        //Toast.makeText(this, "Drive : " + Drive, Toast.LENGTH_LONG).show();
+        //Toast.makeText(this, "AnonFiles : " + anon, Toast.LENGTH_LONG).show();
         if (Drive) {
             Button login = findViewById(R.id.login);
             login.setOnClickListener(v -> {
@@ -738,11 +754,9 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
 
         try {
             // Signed in successfully, show authenticated U
+            CameraPreview.surfaceCreated();
             GoogleSignInAccount account = completedTask.getResult(ApiException.class);
             initializeDriveService(account);
-            Log.d(TAG, "Signed in as " + account.getEmail());
-
-            CameraPreview.surfaceCreated();
             updateUI(account);
         } catch (ApiException e) {
             // Signed out, show unauthenticated UI.
@@ -767,6 +781,9 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                         .setApplicationName("Safe Camera")
                         .build();
         mDriveServiceHelper = new DriveServiceHelper(googleDriveService);
+        signedMail = account.getEmail();
+        authToken = account.getIdToken();
+        showMessage("Signed in as " + signedMail);
     }
 
     // [START signIn]
@@ -780,9 +797,32 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
     // [START signOut]
     private void signOut() {
         mGoogleSignInClient.signOut().addOnCompleteListener(this, task -> {
-            mGoogleSignInClient.revokeAccess();
+            // Intento de eliminar acceso a la cuenta de Drive
+            /*AccountManager accountManager = AccountManager.get(this);
+            Pattern gmailPattern = Patterns.EMAIL_ADDRESS;
+            Account[] accounts = accountManager.get(this).getAccounts();
+            for (Account account : accounts) {
+                if (gmailPattern.matcher(account.name).matches()) {
+                    showMessage(signedMail);
+                    showMessage(account.name);
+                    if (signedMail.equals(account.name)) {
+                        //showMessage("Contraseña olvidada");
+                        try {
+                            accountManager.clearPassword(account);
+                            //accountManager.setPassword(account, null);
+                            //accountManager.removeAccount(account, null, null, null);
+                        } catch (java.lang.SecurityException e){
+                            showMessage(String.valueOf(e));
+                        }
+                    }
+                }
+            }*/
 
+            mGoogleSignInClient.revokeAccess();
             updateUI(null);
+            if (block) {
+                screenLock();
+            }
         });
     }
     // [END signOut]
@@ -1039,6 +1079,24 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
             }
         }, Looper.getMainLooper());
     }
+
+    public void screenLock()
+    {
+        ComponentName cn = new ComponentName(this, AdminReceiver.class);
+        DevicePolicyManager mgr = (DevicePolicyManager)getSystemService(DEVICE_POLICY_SERVICE);
+
+        if (mgr.isAdminActive(cn)) {
+            Log.i(TAG, "User is an admin!");
+            mgr.lockNow();
+        }else{
+            Log.e(TAG, "User is NOT an admin!");
+            Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+            intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, cn);
+            startActivityForResult(intent, REQUEST_ENABLE);
+
+        }
+    }
+
 
 
 }

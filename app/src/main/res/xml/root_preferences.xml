@@ -18,13 +18,20 @@
         android:defaultValue="false"
         android:key="Drive"
         android:title="Google Drive"
-        android:disableDependentsState="false" />
+        android:disableDependentsState="false"
+        />
        <!-- <Preference
             android:title="Inicio de sesión"
             android:key="@string/loginbutton"
             android:summary="@string/login_summary"
             android:dependency="Drive" /> -->
-    <SwitchPreference
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:dependency="Drive"
+            android:key="block"
+            android:summary="Tras grabar el vídeo, el dispositivo se bloqueará."
+            android:title="Bloquear dispositivo" />
+        <SwitchPreference
         android:defaultValue="false"
         android:key="anon"
         android:title="AnonFiles"/>
