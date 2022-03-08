@@ -207,7 +207,6 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                             Manifest.permission.CAMERA,
                             Manifest.permission.RECORD_AUDIO,
                             Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                            Manifest.permission.GET_ACCOUNTS,
                             Manifest.permission.ACCESS_FINE_LOCATION
                     },
                     REQUEST_CODE);
@@ -449,7 +448,6 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                                     + grantResults[1]
                                     + grantResults[2]
                                     + grantResults[3]
-                                    + grantResults[4]
                                     == PackageManager.PERMISSION_GRANTED
                             )
             ) {

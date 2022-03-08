@@ -26,7 +26,7 @@
         <entry key="app/src/main/res/layout/toast1.xml" value="0.13125" />
         <entry key="app/src/main/res/xml/authenticator.xml" value="0.8108552631578947" />
         <entry key="app/src/main/res/xml/device_admin.xml" value="0.8108552631578947" />
-        <entry key="app/src/main/res/xml/root_preferences.xml" value="0.33" />
+        <entry key="app/src/main/res/xml/root_preferences.xml" value="0.25" />
       </map>
     </option>
   </component>
