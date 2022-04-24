@@ -26,8 +26,10 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Looper;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Patterns;
+import android.util.Size;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -156,6 +158,7 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
     boolean anon = false;
     boolean fileio = false;
     boolean block = false;
+    boolean drive = false;
 
     // Localización
     double longitude;
@@ -164,6 +167,10 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
     //Claves
     byte[] priv = null;
     private String signedMail;
+
+    // Tamaño
+    int Dwidth;
+    int Dheight;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint({"ClickableViewAccessibility", "MissingPermission"})
@@ -253,14 +260,19 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
 
 
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean Drive = sharedPreferences.getBoolean("Drive", false);
+        drive = sharedPreferences.getBoolean("Drive", false);
         anon = sharedPreferences.getBoolean("anon", false);
         fileio = sharedPreferences.getBoolean("fileio", false);
         block = sharedPreferences.getBoolean("block", false);
-        showMessage("bloquear: " + block);
+
+        DisplayMetrics metrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        Dwidth = metrics.widthPixels;
+        Dheight = metrics.heightPixels;
+
         //Toast.makeText(this, "Drive : " + Drive, Toast.LENGTH_LONG).show();
         //Toast.makeText(this, "AnonFiles : " + anon, Toast.LENGTH_LONG).show();
-        if (Drive) {
+        if (drive) {
             Button login = findViewById(R.id.login);
             login.setOnClickListener(v -> {
                 Log.i(TAG, "Inicio de sesión");
@@ -333,14 +345,24 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
         recorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
         recorder.setVideoSource(MediaRecorder.VideoSource.DEFAULT);
 
-        /* Step 4: Encoders
+        // Step 4: Output
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
 
-        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-        recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);*/
+        // Size
 
         CamcorderProfile cpHigh = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
-        recorder.setProfile(cpHigh);
+        Camera.Size previewSize = mPreview.getPreviewSize();
+        recorder.setVideoSize(previewSize.width , previewSize.height);
+
+        // Step 5: Encoders
+        recorder.setVideoEncoder(cpHigh.videoCodec);
+        recorder.setAudioEncoder(cpHigh.audioCodec);
+
+        // Step 6: Bitrate
+        recorder.setVideoEncodingBitRate(cpHigh.videoBitRate);
+        recorder.setVideoFrameRate(cpHigh.videoFrameRate);
+
+
         recorder.setLocation(Float.parseFloat(String.valueOf(latitude)),Float.parseFloat(String.valueOf(longitude)));
 
         // Set 5: Output file
@@ -377,7 +399,7 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
 
         init_encrypt(filename);
         GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
-        if (account != null) {
+        if (account != null && drive) {
             createVideo(enc_filename);
 
         } else {
@@ -805,28 +827,6 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
     // [START signOut]
     private void signOut() {
         mGoogleSignInClient.signOut().addOnCompleteListener(this, task -> {
-            // Intento de eliminar acceso a la cuenta de Drive
-            /*AccountManager accountManager = AccountManager.get(this);
-            Pattern gmailPattern = Patterns.EMAIL_ADDRESS;
-            Account[] accounts = accountManager.get(this).getAccounts();
-            for (Account account : accounts) {
-                if (gmailPattern.matcher(account.name).matches()) {
-                    showMessage(signedMail);
-                    showMessage(account.name);
-                    if (signedMail.equals(account.name)) {
-                        //showMessage("Contraseña olvidada");
-                        try {
-                            accountManager.clearPassword(account);
-                            //accountManager.setPassword(account, null);
-                            //accountManager.removeAccount(account, null, null, null);
-                        } catch (java.lang.SecurityException e){
-                            showMessage(String.valueOf(e));
-                        }
-                    }
-                }
-            }*/
-
-            mGoogleSignInClient.revokeAccess();
             updateUI(null);
             if (block) {
                 screenLock();
@@ -883,8 +883,9 @@ public class MainActivity extends FragmentActivity implements ActivityCompat.OnR
                     .addOnSuccessListener(fileId -> readFile(fileId))
                     .addOnFailureListener(exception ->
                             Log.e(TAG, "Couldn't create file.", exception));
+        } else {
+            Log.i(TAG, "mDriveServiceHelper es null");
         }
-        Log.i(TAG, "mDriveServiceHelper es null");
         //
     }
 
